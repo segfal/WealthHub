@@ -135,6 +135,11 @@ func analyzeTimePatterns(transactions []Transaction) []TimePattern {
 	return patterns
 }
 
+/** @dev
+ * @param transactions []Transaction
+ * @param categoryTotals map[string]float64
+ * @return []PredictedSpend
+ */
 func predictFutureSpending(transactions []Transaction, categoryTotals map[string]float64) []PredictedSpend {
 	var predictions []PredictedSpend
 

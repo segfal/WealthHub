@@ -4,6 +4,11 @@ import (
 	"database/sql"
 )
 
+/** @dev	
+ * @param db *sql.DB
+ * @param accountID string
+ * @return []Transaction, error
+ */
 func getTransactions(db *sql.DB, accountID string) ([]Transaction, error) {
 	query := `
 		SELECT transaction_id, account_id, date, amount, category, merchant, location 
@@ -16,6 +21,10 @@ func getTransactions(db *sql.DB, accountID string) ([]Transaction, error) {
 		return nil, err
 	}
 	defer rows.Close()
+	/** @dev
+	 * @param rows *sql.Rows
+	 * @return []Transaction, error
+	 */
 
 	var transactions []Transaction
 	for rows.Next() {

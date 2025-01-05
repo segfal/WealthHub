@@ -1,180 +1,157 @@
-import { useState, useMemo, useEffect } from 'react';
+import { motion } from "framer-motion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Card } from "./components/ui/card";
+import SpendingOverview from "@/components/SpendingOverview";
+import SpendingCategories from "@/components/SpendingCategories";
+import SpendingPredictions from "@/components/SpendingPredictions";
+import SpendingPatterns from "@/components/SpendingPatterns";
+import { DollarSign, Wallet, BellDot } from "lucide-react";
 
-interface Transaction {
-    transactionId: string;
-    category: string;
-    location: string;
-    company: string;
-    amount: number;
-    date: string;
-    description: string;
-    status: string;
-}
-
-const HomePage = () => {
-    const currentDate = new Date(); 
-    const formattedDate = currentDate.toLocaleDateString();
-    const [date, setDate] = useState(formattedDate);
-    const [dummyTransactions, setDummyTransactions] = useState<Transaction[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchTransactions = async () => {
-            try {
-                setIsLoading(true);
-                // Simulating an API call with local data
-                const response = await import('./data.js');
-                setDummyTransactions(response.dummyTransactions);
-                setError(null);
-            } catch (err) {
-                setError('Failed to load transactions');
-                console.error('Error loading transactions:', err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchTransactions();
-    }, []); // Empty dependency array means this runs once on mount
-
-    // Handler functions with correct TypeScript syntax
-    const handleDate = (transaction: Transaction): string => {
-        return transaction.date;
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
     }
+  }
+};
 
-    const handleMoney = (transaction: Transaction): number => {
-        return transaction.amount;
-    }
-
-    const handleLocation = (transaction: Transaction): string => {
-        return transaction.location;
-    }
-
-    const handleCompany = (transaction: Transaction): string => {
-        return transaction.company;
-    }
-
-    const handleCategory = (transaction: Transaction): string => {
-        return transaction.category;
-    }
-
-    const handleDescription = (transaction: Transaction): string => {
-        return transaction.description;
-    }
-
-    const handleStatus = (transaction: Transaction): string => {
-        return transaction.status;
-    }
-
-    //useMemo uses previous data in localStorage. useMemo stores/retrieves data from the browser
-    // Analytics calculations with null checks
-    const analytics = useMemo(() => {
-        if (!dummyTransactions.length) {
-            return {
-                totalSpent: 0,
-                spendingByCategory: {},
-                mostFrequentLocation: 'No data',
-                highestExpense: null
-            };
-        }
-
-        return {
-            totalSpent: dummyTransactions.reduce((sum, transaction) => 
-                sum + transaction.amount, 0),
-            
-            spendingByCategory: dummyTransactions.reduce((acc, transaction) => {
-                acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount;
-                return acc;
-            }, {} as { [key: string]: number }),
-            
-            mostFrequentLocation: Object.entries(
-                dummyTransactions.reduce((acc, transaction) => {
-                    acc[transaction.location] = (acc[transaction.location] || 0) + 1;
-                    return acc;
-                }, {} as { [key: string]: number })
-            ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'No data',
-            
-            highestExpense: dummyTransactions.reduce((max, transaction) => 
-                transaction.amount > max.amount ? transaction : max, 
-                dummyTransactions[0]
-            )
-        };
-    }, [dummyTransactions]);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-900 text-white p-4 flex items-center justify-center">
-                <div className="text-xl">Loading transactions...</div>
+const Homepage = () => {
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header Section */}
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-8">
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-3xl font-bold">Welcome back, Jane</h1>
+            <p className="text-gray-400 text-sm">Track your financial journey</p>
+          </motion.div>
+          
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center space-x-6"
+          >
+            <div className="text-right">
+              <p className="text-3xl font-bold">$2,435.67</p>
+              <p className="text-[#00C805] text-sm font-medium">+$235.23 (8.4%)</p>
             </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-900 text-white p-4 flex items-center justify-center">
-                <div className="text-xl text-red-400">{error}</div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="min-h-screen bg-gray-900 text-white p-4">
-            <h1 className="text-3xl font-bold mb-6 text-white">Finances Bros Dashboard</h1>
-            
-            {/* Analytics Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
-                    <h3 className="font-bold text-gray-300">Total Spent</h3>
-                    <p className="text-2xl text-green-400">${analytics.totalSpent.toFixed(2)}</p>
-                </div>
-                
-                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
-                    <h3 className="font-bold text-gray-300">Most Frequent Location</h3>
-                    <p className="text-2xl text-blue-400">{analytics.mostFrequentLocation}</p>
-                </div>
-                
-                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
-                    <h3 className="font-bold text-gray-300">Highest Single Expense</h3>
-                    <p className="text-2xl text-red-400">
-                        {analytics.highestExpense 
-                            ? `$${analytics.highestExpense.amount.toFixed(2)}`
-                            : 'No data'
-                        }
-                    </p>
-                    <p className="text-sm text-gray-400">
-                        {analytics.highestExpense?.description || 'No description'}
-                    </p>
-                </div>
-            </div>
-
-            {/* Transactions List */}
-            <div>
-                <h2 className="text-xl font-bold mb-4 text-white">Recent Transactions</h2>
-                {dummyTransactions.length === 0 ? (
-                    <div className="text-gray-400">No transactions available</div>
-                ) : (
-                    <div className="grid gap-4">
-                        {dummyTransactions.map((transaction) => (
-                            <div key={transaction.transactionId} 
-                                 className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700 
-                                          flex justify-between items-center hover:bg-gray-700 transition-colors">
-                                <div>
-                                    <h3 className="font-bold text-white">{transaction.company}</h3>
-                                    <p className="text-sm text-gray-400">{transaction.description}</p>
-                                    <p className="text-sm text-gray-500">{transaction.date}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-green-400">${transaction.amount.toFixed(2)}</p>
-                                    <p className="text-sm text-gray-400">{transaction.category}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <button className="p-2 rounded-full hover:bg-zinc-900 transition-colors">
+              <BellDot className="w-6 h-6 text-gray-400" />
+            </button>
+          </motion.div>
         </div>
-    );
-}
 
-export default HomePage;
+        {/* Quick Stats */}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div 
+            className="bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+            variants={containerVariants}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Available Balance</p>
+                <p className="text-xl font-bold mt-1">$2,200.45</p>
+              </div>
+              <Wallet className="w-8 h-8 text-[#00C805]" />
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+            variants={containerVariants}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Monthly Spending</p>
+                <p className="text-xl font-bold mt-1">$2,388.97</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-[#00C805]" />
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+            variants={containerVariants}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Account Type</p>
+                <p className="text-xl font-bold mt-1">Chase Total Checking</p>
+              </div>
+              <div className="bg-[#00C805]/10 text-[#00C805] px-3 py-1 rounded-full text-sm font-medium">
+                Premium
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Main Dashboard Content */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="w-full bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+            <TabsTrigger 
+              value="overview" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="categories" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Categories
+            </TabsTrigger>
+            <TabsTrigger 
+              value="predictions" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Predictions
+            </TabsTrigger>
+            <TabsTrigger 
+              value="patterns" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Patterns
+            </TabsTrigger>
+          </TabsList>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="bg-zinc-900 rounded-2xl border border-zinc-800"
+          >
+            <TabsContent value="overview" className="p-6">
+              <SpendingOverview />
+            </TabsContent>
+
+            <TabsContent value="categories" className="p-6">
+              <SpendingCategories />
+            </TabsContent>
+
+            <TabsContent value="predictions" className="p-6">
+              <SpendingPredictions />
+            </TabsContent>
+
+            <TabsContent value="patterns" className="p-6">
+              <SpendingPatterns />
+            </TabsContent>
+          </motion.div>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Homepage;

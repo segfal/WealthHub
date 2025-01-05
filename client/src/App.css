@@ -1,3 +1,16 @@
+/* Reset any default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, #root {
+  background-color: black;
+  min-height: 100vh;
+  width: 100%;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
