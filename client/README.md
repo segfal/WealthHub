@@ -1,50 +1,58 @@
-# React + TypeScript + Vite
+Clone the repository
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+npm install
 
-Currently, two official plugins are available:
+npm run dev
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Expanding the ESLint configuration
+# Install Dependencies
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+npm install
 
-- Configure the top-level `parserOptions` property like this:
+# Run the application
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+npm run dev
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+## 🧩 Components
+
+### Homepage [src/Homepage.tsx]
+Main dashboard layout featuring:
+- Dark theme with Robinhood-inspired design
+- User welcome section with balance display
+- Quick stats cards for financial overview
+- Tabbed navigation system
+- Framer Motion animations
+
+### SpendingOverview [src/components/SpendingOverview.tsx]
+Displays key financial metrics:
+- Total spent amount
+- Average transaction value
+- Transaction count
+- Interactive spending trend charts
+- Real-time data fetching from `/api/analytics/{accountId}`
+
+### SpendingCategories [src/components/SpendingCategories.tsx]
+Visualizes spending patterns:
+- Interactive pie chart for category distribution
+- Progress bars for spending breakdown
+- Percentage calculations
+- Color-coded categories
+- Data from `/api/categories/{accountId}`
+
+### SpendingPredictions [src/components/SpendingPredictions.tsx]
+Provides spending forecasts:
+- Line charts for trend visualization
+- Confidence indicators
+- Warning system for unusual patterns
+- Category-wise predictions
+- Data from `/api/predictions/{accountId}`
+
+### SpendingPatterns [src/components/SpendingPatterns.tsx]
+Analyzes spending behavior:
+- Time-of-day analysis
+- Day-of-week breakdown
+- Recurring transaction detection
+- Pattern visualization
+- Data from `/api/patterns/{accountId}`

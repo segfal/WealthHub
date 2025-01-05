@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle } from "lucide-react";
-
+import axios from 'axios';
 interface Prediction {
   category: string;
   predictedAmount: number;
@@ -16,9 +16,8 @@ const SpendingPredictions = () => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/predictions/1234567890')
-      .then(res => res.json())
-      .then(data => setPredictions(data))
+    axios.get('http://localhost:8080/api/predictions/1234567890')
+      .then(res => setPredictions(res.data))
       .catch(err => console.error('Error fetching predictions:', err));
   }, []);
 
@@ -36,7 +35,7 @@ const SpendingPredictions = () => {
               <div>
                 <h3 className="text-lg font-medium">{prediction.category}</h3>
                 <p className="text-sm text-gray-500">
-                  Predicted spending: ${prediction.predictedAmount.toFixed(2)}
+                  Predicted spending: ${prediction.likelihood}
                 </p>
               </div>
               {prediction.warning && (
