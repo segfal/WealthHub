@@ -1,0 +1,117 @@
+{
+    "account": {
+      "account_id": "1234567890",
+      "account_name": "Chase Total Checking",
+      "account_type": "Checking",
+      "account_number": "****0000",
+      "balance": {
+        "current": 2435.67,
+        "available": 2200.45,
+        "currency": "USD"
+      },
+      "owner_name": "Jane Doe",
+      "bank_details": {
+        "bank_name": "Chase Bank",
+        "routing_number": "021000021",
+        "branch": "Manhattan Main Branch, New York, NY"
+      },
+      "transactions": [
+        {
+          "transaction_id": "TXN10001",
+          "date": "2025-01-01",
+          "amount": -12.99,
+          "category": "Dining",
+          "merchant": "Chipotle Mexican Grill",
+          "location": "Manhattan, New York, NY",
+          "timestamp": "2025-01-01T12:34:56",
+          "type": "Debit",
+          "status": "Completed",
+          "payment_method": "Debit Card"
+        },
+        {
+          "transaction_id": "TXN10002",
+          "date": "2025-01-02",
+          "amount": -150.00,
+          "category": "Groceries",
+          "merchant": "Trader Joe's",
+          "location": "Manhattan, New York, NY",
+          "timestamp": "2025-01-02T17:45:00",
+          "type": "Debit",
+          "status": "Completed",
+          "payment_method": "Debit Card"
+        },
+        {
+          "transaction_id": "TXN10003",
+          "date": "2025-01-03",
+          "amount": -2200.00,
+          "category": "Rent",
+          "merchant": "Park Avenue Apartments",
+          "location": "Manhattan, New York, NY",
+          "timestamp": "2025-01-03T09:00:00",
+          "type": "ACH Transfer",
+          "status": "Completed",
+          "payment_method": "ACH"
+        },
+        {
+          "transaction_id": "TXN10004",
+          "date": "2025-01-04",
+          "amount": -12.99,
+          "category": "Entertainment",
+          "merchant": "Netflix",
+          "location": "Online",
+          "timestamp": "2025-01-04T21:00:00",
+          "type": "Recurring Debit",
+          "status": "Completed",
+          "payment_method": "Subscription"
+        },
+        {
+          "transaction_id": "TXN10005",
+          "date": "2025-01-05",
+          "amount": 200.00,
+          "category": "Income",
+          "merchant": "Freelance Work",
+          "location": "Manhattan, New York, NY",
+          "timestamp": "2025-01-05T14:30:00",
+          "type": "Credit",
+          "status": "Pending",
+          "payment_method": "Bank Transfer"
+        },
+        {
+          "transaction_id": "TXN10006",
+          "date": "2025-01-06",
+          "amount": 1000.00,
+          "category": "Income",
+          "merchant": "Freelance Work",
+          "location": "Manhattan, New York, NY",
+          "timestamp": "2025-01-06T14:30:00",
+          "type": "Credit",
+          "status": "Pending",
+          "payment_method": "Bank Transfer"
+        },
+        {
+            "transaction_id": "TXN10007",
+            "date": "2025-01-07",
+            "amount": -12.99,
+            "category": "Dining",
+            "merchant": "Chipotle Mexican Grill",
+            "location": "Manhattan, New York, NY",
+            "timestamp": "2025-01-07T14:30:00",
+            "type": "Debit",
+            "status": "Completed",
+            "payment_method": "Debit Card"
+        },
+        {
+            "transaction_id": "TXN10008",
+            "date": "2025-01-08",
+            "amount": -12.99,
+            "category": "Dining",
+            "merchant": "Chipotle Mexican Grill",
+            "location": "Manhattan, New York, NY",
+            "timestamp": "2025-01-08T14:30:00",
+            "type": "Debit",
+            "status": "Completed",
+            "payment_method": "Debit Card"
+        }
+      ]
+    }
+  }

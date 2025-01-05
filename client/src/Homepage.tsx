@@ -1,306 +1,179 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+interface Transaction {
+    transactionId: string;
+    category: string;
+    location: string;
+    company: string;
+    amount: number;
+    date: string;
+    description: string;
+    status: string;
+}
 
 const HomePage = () => {
     const currentDate = new Date(); 
     const formattedDate = currentDate.toLocaleDateString();
     const [date, setDate] = useState(formattedDate);
-    const [money, setMoney] = useState(null); 
-    const [location, setLocation] = useState(null); 
-    const [item, setItem] = useState(null);
-    const [category, setCategory] = useState(null);
-    const dummyTransactions = [
-        {
-            transactionId: "TXN001",
-            category: "Groceries",
-            location: "Walmart, New York",
-            company: "Walmart",
-            amount: 120.50,
-            date: "2024-12-01",
-            description: "Weekly groceries",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN002",
-            category: "Dining",
-            location: "Chipotle, San Francisco",
-            company: "Chipotle",
-            amount: 25.75,
-            date: "2024-12-02",
-            description: "Lunch with friends",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN003",
-            category: "Transportation",
-            location: "Uber",
-            company: "Uber",
-            amount: 18.00,
-            date: "2024-12-03",
-            description: "Ride to office",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN004",
-            category: "Entertainment",
-            location: "AMC Theatres, Los Angeles",
-            company: "AMC Theatres",
-            amount: 15.00,
-            date: "2024-12-03",
-            description: "Movie night",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN005",
-            category: "Shopping",
-            location: "Amazon",
-            company: "Amazon",
-            amount: 75.30,
-            date: "2024-12-04",
-            description: "Bought books and gadgets",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN006",
-            category: "Health",
-            location: "Walgreens, Chicago",
-            company: "Walgreens",
-            amount: 42.00,
-            date: "2024-12-05",
-            description: "Medication purchase",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN007",
-            category: "Utilities",
-            location: "Online",
-            company: "Con Edison",
-            amount: 95.60,
-            date: "2024-12-05",
-            description: "Electricity bill",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN008",
-            category: "Travel",
-            location: "Delta Airlines",
-            company: "Delta Airlines",
-            amount: 350.00,
-            date: "2024-12-06",
-            description: "Flight to Miami",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN009",
-            category: "Groceries",
-            location: "Trader Joe's, Boston",
-            company: "Trader Joe's",
-            amount: 87.25,
-            date: "2024-12-07",
-            description: "Weekly groceries",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN010",
-            category: "Dining",
-            location: "Starbucks, Seattle",
-            company: "Starbucks",
-            amount: 12.45,
-            date: "2024-12-07",
-            description: "Morning coffee",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN011",
-            category: "Shopping",
-            location: "Target, Houston",
-            company: "Target",
-            amount: 58.90,
-            date: "2024-12-08",
-            description: "Bought home essentials",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN012",
-            category: "Transportation",
-            location: "Lyft",
-            company: "Lyft",
-            amount: 22.50,
-            date: "2024-12-08",
-            description: "Ride to airport",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN013",
-            category: "Health",
-            location: "CVS, San Diego",
-            company: "CVS",
-            amount: 30.00,
-            date: "2024-12-09",
-            description: "Vitamins and supplements",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN014",
-            category: "Utilities",
-            location: "Online",
-            company: "AT&T",
-            amount: 65.00,
-            date: "2024-12-09",
-            description: "Internet bill",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN015",
-            category: "Entertainment",
-            location: "Spotify",
-            company: "Spotify",
-            amount: 9.99,
-            date: "2024-12-10",
-            description: "Monthly subscription",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN016",
-            category: "Travel",
-            location: "Airbnb",
-            company: "Airbnb",
-            amount: 250.00,
-            date: "2024-12-10",
-            description: "Stay in Miami",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN017",
-            category: "Groceries",
-            location: "Costco, Atlanta",
-            company: "Costco",
-            amount: 105.80,
-            date: "2024-12-11",
-            description: "Bulk groceries",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN018",
-            category: "Dining",
-            location: "Pizza Hut, Chicago",
-            company: "Pizza Hut",
-            amount: 22.35,
-            date: "2024-12-11",
-            description: "Family dinner",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN019",
-            category: "Shopping",
-            location: "Best Buy, San Jose",
-            company: "Best Buy",
-            amount: 120.00,
-            date: "2024-12-12",
-            description: "Bought a new headset",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN020",
-            category: "Transportation",
-            location: "Metro, Boston",
-            company: "MBTA",
-            amount: 2.75,
-            date: "2024-12-12",
-            description: "Subway ticket",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN021",
-            category: "Health",
-            location: "Rite Aid, Dallas",
-            company: "Rite Aid",
-            amount: 20.00,
-            date: "2024-12-13",
-            description: "First aid kit",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN022",
-            category: "Utilities",
-            location: "Online",
-            company: "Verizon",
-            amount: 80.00,
-            date: "2024-12-13",
-            description: "Phone bill",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN023",
-            category: "Entertainment",
-            location: "Netflix",
-            company: "Netflix",
-            amount: 15.49,
-            date: "2024-12-14",
-            description: "Monthly subscription",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN024",
-            category: "Travel",
-            location: "Hertz, Orlando",
-            company: "Hertz",
-            amount: 150.00,
-            date: "2024-12-14",
-            description: "Car rental",
-            status: "Completed"
-        },
-        {
-            transactionId: "TXN025",
-            category: "Groceries",
-            location: "Whole Foods, Austin",
-            company: "Whole Foods",
-            amount: 75.60,
-            date: "2024-12-15",
-            description: "Organic groceries",
-            status: "Completed"
-        }
-    ];
+    const [dummyTransactions, setDummyTransactions] = useState<Transaction[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleDate = () => {
-        return null
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            try {
+                setIsLoading(true);
+                // Simulating an API call with local data
+                const response = await import('./data.js');
+                setDummyTransactions(response.dummyTransactions);
+                setError(null);
+            } catch (err) {
+                setError('Failed to load transactions');
+                console.error('Error loading transactions:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTransactions();
+    }, []); // Empty dependency array means this runs once on mount
+
+    // Handler functions with correct TypeScript syntax
+    const handleDate = (transaction: Transaction): string => {
+        return transaction.date;
     }
 
-    const handleMoney = () => {
-        return null
-    }  
+    const handleMoney = (transaction: Transaction): number => {
+        return transaction.amount;
+    }
 
-    const handleLocation = () => {
-        return null
-    }  
+    const handleLocation = (transaction: Transaction): string => {
+        return transaction.location;
+    }
 
-    const handleItem = () => {
-        return null
-    } 
+    const handleCompany = (transaction: Transaction): string => {
+        return transaction.company;
+    }
 
-    const handleCategory = () => {
-        return null
-    } 
+    const handleCategory = (transaction: Transaction): string => {
+        return transaction.category;
+    }
+
+    const handleDescription = (transaction: Transaction): string => {
+        return transaction.description;
+    }
+
+    const handleStatus = (transaction: Transaction): string => {
+        return transaction.status;
+    }
+
+    //useMemo uses previous data in localStorage. useMemo stores/retrieves data from the browser
+    // Analytics calculations with null checks
+    const analytics = useMemo(() => {
+        if (!dummyTransactions.length) {
+            return {
+                totalSpent: 0,
+                spendingByCategory: {},
+                mostFrequentLocation: 'No data',
+                highestExpense: null
+            };
+        }
+
+        return {
+            totalSpent: dummyTransactions.reduce((sum, transaction) => 
+                sum + transaction.amount, 0),
+            
+            spendingByCategory: dummyTransactions.reduce((acc, transaction) => {
+                acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount;
+                return acc;
+            }, {} as { [key: string]: number }),
+            
+            mostFrequentLocation: Object.entries(
+                dummyTransactions.reduce((acc, transaction) => {
+                    acc[transaction.location] = (acc[transaction.location] || 0) + 1;
+                    return acc;
+                }, {} as { [key: string]: number })
+            ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'No data',
+            
+            highestExpense: dummyTransactions.reduce((max, transaction) => 
+                transaction.amount > max.amount ? transaction : max, 
+                dummyTransactions[0]
+            )
+        };
+    }, [dummyTransactions]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-900 text-white p-4 flex items-center justify-center">
+                <div className="text-xl">Loading transactions...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-900 text-white p-4 flex items-center justify-center">
+                <div className="text-xl text-red-400">{error}</div>
+            </div>
+        );
+    }
 
     return (
-      //data being rendered NOT printed -> console.log() 
-      //map is a for loop in a function
-            <div>
-                <h1>Home Page</h1>
-                <h2>Today's Date: {date}</h2>
-                {dummyTransactions.map((transaction) => (
-                    <div key={transaction.transactionId}>
-                        <h3>Transaction ID: {transaction.transactionId}</h3> 
-                        <p>Category: {transaction.category}</p>
-                        <p>Location: {transaction.location}</p> 
-                        <p>Company: {transaction.company}</p>
-                        <p>Amount: {transaction.amount}</p>
-                        <p>Date: {transaction.date}</p>
-                        <p>Description: {transaction.description}</p>
-                        <p>Status: {transaction.status}</p> 
-                    </div>
-                ))}
+        <div className="min-h-screen bg-gray-900 text-white p-4">
+            <h1 className="text-3xl font-bold mb-6 text-white">Finances Bros Dashboard</h1>
+            
+            {/* Analytics Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                    <h3 className="font-bold text-gray-300">Total Spent</h3>
+                    <p className="text-2xl text-green-400">${analytics.totalSpent.toFixed(2)}</p>
+                </div>
+                
+                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                    <h3 className="font-bold text-gray-300">Most Frequent Location</h3>
+                    <p className="text-2xl text-blue-400">{analytics.mostFrequentLocation}</p>
+                </div>
+                
+                <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                    <h3 className="font-bold text-gray-300">Highest Single Expense</h3>
+                    <p className="text-2xl text-red-400">
+                        {analytics.highestExpense 
+                            ? `$${analytics.highestExpense.amount.toFixed(2)}`
+                            : 'No data'
+                        }
+                    </p>
+                    <p className="text-sm text-gray-400">
+                        {analytics.highestExpense?.description || 'No description'}
+                    </p>
+                </div>
             </div>
-        
+
+            {/* Transactions List */}
+            <div>
+                <h2 className="text-xl font-bold mb-4 text-white">Recent Transactions</h2>
+                {dummyTransactions.length === 0 ? (
+                    <div className="text-gray-400">No transactions available</div>
+                ) : (
+                    <div className="grid gap-4">
+                        {dummyTransactions.map((transaction) => (
+                            <div key={transaction.transactionId} 
+                                 className="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700 
+                                          flex justify-between items-center hover:bg-gray-700 transition-colors">
+                                <div>
+                                    <h3 className="font-bold text-white">{transaction.company}</h3>
+                                    <p className="text-sm text-gray-400">{transaction.description}</p>
+                                    <p className="text-sm text-gray-500">{transaction.date}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-green-400">${transaction.amount.toFixed(2)}</p>
+                                    <p className="text-sm text-gray-400">{transaction.category}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
 
