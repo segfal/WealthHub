@@ -20,14 +20,14 @@ func main() {
 
 	// Database connection string
 	dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
+		os.Getenv("DB_HOST"), //os searches thru ur operating system, Getenv has variables we dont want anyone to know
 		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
 	)
 
-	// Connect to database
+	// Connect to database. Make sure you're allowed to talk to the database, makes sure it exists
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal(err)

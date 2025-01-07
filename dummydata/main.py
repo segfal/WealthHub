@@ -126,7 +126,7 @@ class Transaction:
         self.transaction_id = transaction_id
         self.account_id = account_id
         self.date = date
-        self.amount = amount
+        self.amount = round(amount, 2)
         self.category = category
         self.merchant = merchant
         self.location = location
@@ -508,12 +508,16 @@ class User:
         """Add transaction with validation"""
         try:
             tx_dict = self.validate_transaction(transaction)
+            
+            # Round the amount to 2 decimal places
+            tx_dict["amount"] = round(tx_dict["amount"], 2)
+            
             self.account["transactions"].append(tx_dict)
             
             # Update balance based on transaction amount
             amount = tx_dict["amount"]
-            self.account["balance"]["current"] += amount
-            self.account["balance"]["available"] += amount
+            self.account["balance"]["current"] = round(self.account["balance"]["current"] + amount, 2)
+            self.account["balance"]["available"] = round(self.account["balance"]["available"] + amount, 2)
             
             # Ensure balance doesn't go below zero (optional)
             if self.account["balance"]["available"] < 0:
@@ -533,8 +537,8 @@ class User:
         return self.account["balance"]
     
     def set_initial_balance(self, current_balance, available_balance=None):
-        self.account["balance"]["current"] = current_balance
-        self.account["balance"]["available"] = available_balance if available_balance is not None else current_balance
+        self.account["balance"]["current"] = round(current_balance, 2)
+        self.account["balance"]["available"] = round(available_balance if available_balance is not None else current_balance, 2)
 
     def save_to_json(self, filename):
         with open(filename, 'w') as f:
@@ -577,9 +581,9 @@ def transaction_generator(user):
             # Rent payment
             rent = RentalTransaction(
                 transaction_id=f"TXN{transaction_counter:05d}",
-                account_id=user.account["account_id"],  # Fix: use account from user object
+                account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.randint(2200, 2300)
+                amount=round(random.randint(2200, 2300), 2)
             )
             user.add_transaction(rent)
             transaction_counter += 1
@@ -589,7 +593,7 @@ def transaction_generator(user):
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.randint(200, 300)
+                amount=round(random.randint(200, 300), 2)
             )
             user.add_transaction(bill_payment)
             transaction_counter += 1
@@ -620,7 +624,7 @@ def transaction_generator(user):
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.randint(50, 150)  # More realistic grocery amounts
+                amount=round(random.randint(50, 150), 2)
             )
             user.add_transaction(groceries)
             transaction_counter += 1
@@ -632,14 +636,14 @@ def transaction_generator(user):
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.uniform(5.75, 7.75)
+                amount=round(random.uniform(5.75, 7.75), 2)
             )
             user.add_transaction(coffee)
             transaction_counter += 1
 
         if random.random() < 0.4:  # 40% chance of Chipotle
             chipotle = ChipotleTransaction(
-                amount=random.uniform(12.99, 15.99),
+                amount=round(random.uniform(12.99, 15.99), 2),
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d')
@@ -652,7 +656,7 @@ def transaction_generator(user):
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.randint(10, 40),
+                amount=round(random.randint(10, 40), 2),
                 service_type=random.choice(["Ride", "Food"])
             )
             user.add_transaction(uber)
@@ -663,7 +667,7 @@ def transaction_generator(user):
                 transaction_id=f"TXN{transaction_counter:05d}",
                 account_id=user.account["account_id"],
                 date=timestamp.strftime('%Y-%m-%d'),
-                amount=random.randint(10, 100),
+                amount=round(random.randint(10, 100), 2),
                 item_category=random.choice(["Electronics", "Books", "Clothing", "Home", "Other"])
             )
             user.add_transaction(amazon)
