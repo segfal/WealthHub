@@ -16,7 +16,8 @@ const SpendingOverview = () => {
   useEffect(() => {
     // Fetch analytics data
     fetch('http://localhost:8080/api/analytics/1234567890')
-      .then(res => res.json())
+      .then(res => { console.log(res.json());
+        return res.json()})
       .then(data => setAnalytics(data))
       .catch(err => console.error('Error fetching analytics:', err));
   }, []);

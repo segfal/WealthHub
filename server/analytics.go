@@ -3,7 +3,8 @@ package main
 import (
 	"database/sql"
 	"sort"
-	"time"
+	"time" 
+	"fmt"
 )
 
 type Transaction struct {
@@ -26,8 +27,8 @@ type SpendingAnalytics struct {
 
 type CategorySpend struct {
 	Category    string  `json:"category"`
-	TotalSpent  float64 `json:"totalSpent"`
-	Percentage  float64 `json:"percentage"`
+	TotalSpent  string `json:"totalSpent"`
+	Percentage  string `json:"percentage"`
 }
 
 type TimePattern struct {
@@ -61,12 +62,12 @@ func analyzeSpending(db *sql.DB, accountID string, timeRange string) (*SpendingA
 	categoryTotals := make(map[string]float64)
 	var totalSpent float64
 	var transactions []Transaction
-
 	for rows.Next() {
 		var t Transaction
 		if err := rows.Scan(&t.Amount, &t.Category, &t.Date); err != nil {
 			return nil, err
 		}
+
 		categoryTotals[t.Category] += t.Amount
 		totalSpent += t.Amount
 		transactions = append(transactions, t)
@@ -75,10 +76,11 @@ func analyzeSpending(db *sql.DB, accountID string, timeRange string) (*SpendingA
 	// Calculate top categories
 	var topCategories []CategorySpend
 	for category, amount := range categoryTotals {
+		var percentage float64 = (amount / totalSpent) * 100;
 		topCategories = append(topCategories, CategorySpend{
 			Category:   category,
-			TotalSpent: amount,
-			Percentage: (amount / totalSpent) * 100,
+			TotalSpent: fmt.Sprintf("%.2f", amount),
+			Percentage: fmt.Sprintf("%.2f", percentage),
 		})
 	}
 
