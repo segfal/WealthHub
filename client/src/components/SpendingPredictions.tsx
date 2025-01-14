@@ -5,16 +5,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { AlertTriangle } from "lucide-react";
 import axios from 'axios';
 import { dummyTransactions } from "../data";
+import { Prediction } from "./types";
+
 
 const user = dummyTransactions[0];
 
-interface Prediction {
-  category: string;
-  predictedAmount: number;
-  confidence: number;
-  trend: { date: string; amount: number }[];
-  warning?: string;
-}
+
 
 const SpendingPredictions = () => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
