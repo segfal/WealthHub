@@ -4,6 +4,10 @@ import { Card } from "./ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle } from "lucide-react";
 import axios from 'axios';
+import { dummyTransactions } from "../data";
+
+const user = dummyTransactions[0];
+
 interface Prediction {
   category: string;
   predictedAmount: number;
