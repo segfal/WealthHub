@@ -6,6 +6,9 @@ import SpendingCategories from "@/components/SpendingCategories";
 import SpendingPredictions from "@/components/SpendingPredictions";
 import SpendingPatterns from "@/components/SpendingPatterns";
 import { DollarSign, Wallet, BellDot } from "lucide-react";
+import { dummyTransactions } from "./data";
+
+const user = dummyTransactions[0];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -30,7 +33,7 @@ const Homepage = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold">Welcome back, Jane</h1>
+            <h1 className="text-3xl font-bold">Welcome back, {user.account.owner_name}</h1>
             <p className="text-gray-400 text-sm">Track your financial journey</p>
           </motion.div>
           
@@ -41,8 +44,8 @@ const Homepage = () => {
             className="flex items-center space-x-6"
           >
             <div className="text-right">
-              <p className="text-3xl font-bold">$2,435.67</p>
-              <p className="text-[#00C805] text-sm font-medium">+$235.23 (8.4%)</p>
+              <p className="text-3xl font-bold">${user.account.balance.current}</p>
+              <p className="text-[#00C805] text-sm font-medium">+ ${user.account.balance.current - user.account.balance.available} (8.4%)</p>
             </div>
             <button className="p-2 rounded-full hover:bg-zinc-900 transition-colors">
               <BellDot className="w-6 h-6 text-gray-400" />
@@ -64,7 +67,7 @@ const Homepage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Available Balance</p>
-                <p className="text-xl font-bold mt-1">$2,200.45</p>
+                <p className="text-xl font-bold mt-1">${user.account.balance.available}</p>
               </div>
               <Wallet className="w-8 h-8 text-[#00C805]" />
             </div>
@@ -77,7 +80,7 @@ const Homepage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Monthly Spending</p>
-                <p className="text-xl font-bold mt-1">$2,388.97</p>
+                <p className="text-xl font-bold mt-1">${user.account.balance.available}</p>
               </div>
               <DollarSign className="w-8 h-8 text-[#00C805]" />
             </div>
@@ -90,7 +93,7 @@ const Homepage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Account Type</p>
-                <p className="text-xl font-bold mt-1">Chase Total Checking</p>
+                <p className="text-xl font-bold mt-1">{user.account.account_type}</p>
               </div>
               <div className="bg-[#00C805]/10 text-[#00C805] px-3 py-1 rounded-full text-sm font-medium">
                 Premium
