@@ -17,6 +17,8 @@ const containerVariants = {
   }
 };
 
+
+
 const Homepage = () => {
   return (
     <div className="min-h-screen bg-black text-white">
