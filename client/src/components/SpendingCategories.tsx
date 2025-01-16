@@ -3,10 +3,7 @@ import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-
-interface CategoryData {
-  [key: string]: number;
-}
+import { CategoryData } from "./types";
 
 // Colors for different categories
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];

@@ -4,19 +4,25 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"server/analytics"
+	"time"
+
 	"github.com/gorilla/mux"
 )
 
 func setupRoutes(router *mux.Router, db *sql.DB) {
+	repo := analytics.NewRepository(db)
+	analyticsService := analytics.NewService(repo)
+
 	router.HandleFunc("/api/analytics/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
 		timeRange := r.URL.Query().Get("timeRange")
 		if timeRange == "" {
-			timeRange = "1 month" // default time range
+			timeRange = "1 month"
 		}
 
-		analytics, err := analyzeSpending(db, accountID, timeRange)
+		analytics, err := analyticsService.AnalyzeSpending(r.Context(), accountID, timeRange)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -30,37 +36,25 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
 		
-		transactions, err := getTransactions(db, accountID)
+		categoryTotals, err := repo.GetCategoryTotals(r.Context(), accountID, "1 month")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		categories := make(map[string]float64)
-		for _, t := range transactions {
-			categories[t.Category] += t.Amount
-		}
-
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(categories)
+		json.NewEncoder(w).Encode(categoryTotals)
 	}).Methods("GET")
 
 	router.HandleFunc("/api/predictions/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
 		
-		transactions, err := getTransactions(db, accountID)
+		predictions, err := analyticsService.PredictSpending(r.Context(), accountID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		categoryTotals := make(map[string]float64)
-		for _, t := range transactions {
-			categoryTotals[t.Category] += t.Amount
-		}
-
-		predictions := predictFutureSpending(transactions, categoryTotals)
 		
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(predictions)
@@ -69,15 +63,12 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/patterns/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
-		// to call the url http://localhost:8080/api/patterns/1234567890?timeRange=1 month
 		
-		transactions, err := getTransactions(db, accountID)
+		patterns, err := analyticsService.GetTimePatterns(r.Context(), accountID, time.Now().AddDate(0, -1, 0), time.Now())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		patterns := analyzeTimePatterns(transactions)
 		
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(patterns)

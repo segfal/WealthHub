@@ -2,13 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-interface Analytics {
-  totalSpent: number;
-  averageTransaction: number;
-  transactionCount: number;
-  spendingTrend: { date: string; amount: number }[];
-}
+import { Analytics } from "./types";
 
 const SpendingOverview = () => {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);

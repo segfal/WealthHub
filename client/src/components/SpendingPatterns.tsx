@@ -3,23 +3,7 @@ import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
-
-interface Pattern {
-  timeOfDay: {
-    morning: number;
-    afternoon: number;
-    evening: number;
-    night: number;
-  };
-  dayOfWeek: {
-    [key: string]: number;
-  };
-  recurringTransactions: {
-    merchant: string;
-    amount: number;
-    frequency: string;
-  }[];
-}
+import { Pattern } from "./types";
 
 const SpendingPatterns = () => {
   const [patterns, setPatterns] = useState<Pattern | null>(null);

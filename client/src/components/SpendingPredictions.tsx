@@ -4,13 +4,13 @@ import { Card } from "./ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle } from "lucide-react";
 import axios from 'axios';
-interface Prediction {
-  category: string;
-  predictedAmount: number;
-  confidence: number;
-  trend: { date: string; amount: number }[];
-  warning?: string;
-}
+import { dummyTransactions } from "../data";
+import { Prediction } from "./types";
+
+
+const user = dummyTransactions[0];
+
+
 
 const SpendingPredictions = () => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
