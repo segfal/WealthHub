@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"server/types"
 )
 //create, read, update, delete 
 
@@ -10,6 +11,33 @@ import (
  * @param accountID string
  * @return []Transaction, error
  */
+
+/** 
+
+First what we are going to do is add the user account,
+the account will contain these values
+account_id
+account_name
+account_type 
+account_number 
+balance 
+	current 
+	available 
+	currency 
+owner_name 
+bank_details
+	bank_name
+	routing_number
+	branch
+*/
+
+
+func createUser(db *sql.DB, accountID string){
+
+}
+
+
+
 func getTransactions(db *sql.DB, accountID string) ([]Transaction, error) { 
 	query := ` 
 		SELECT transaction_id, account_id, date, amount, category, merchant, location 
