@@ -147,3 +147,6 @@ func getTransactionsGreaterThan100(db *sql.DB, accountID string) error {
 }
 
 
+func main(){
+	
+}
