@@ -61,11 +61,11 @@ graph TD
      }
      ```
    - Mathematical model for average spend calculation:
-     $$ A_{spend}(d,h) = \frac{\sum_{t \in T_{d,h}} |amount(t)|}{|T_{d,h}|} $$
+     \[ A_{spend}(d,h) = \frac{\sum_{t \in T_{d,h}} |amount(t)|}{|T_{d,h}|} \]
      where:
-     - $A_{spend}(d,h)$ is the average spend for day $d$ and hour $h$
-     - $T_{d,h}$ is the set of transactions at day $d$ and hour $h$
-     - $|amount(t)|$ is the absolute value of transaction amount
+     - \(A_{spend}(d,h)\) is the average spend for day \(d\) and hour \(h\)
+     - \(T_{d,h}\) is the set of transactions at day \(d\) and hour \(h\)
+     - \(|amount(t)|\) is the absolute value of transaction amount
    - SQL Query Used:
      ```sql
      SELECT transaction_id, account_id, date, amount, category, merchant, location
@@ -87,13 +87,13 @@ graph TD
      }
      ```
    - Mathematical models:
-     $$ frequency_{norm} = min(\frac{n_{transactions}}{180} \times 30, 1.0) $$
-     $$ amount_{norm} = min(\frac{avg\_amount}{1000}, 1.0) $$
-     $$ likelihood = \frac{frequency_{norm} + amount_{norm}}{2} $$
+     \[ frequency_{norm} = min(\frac{n_{transactions}}{180} \times 30, 1.0) \]
+     \[ amount_{norm} = min(\frac{avg\_amount}{1000}, 1.0) \]
+     \[ likelihood = \frac{frequency_{norm} + amount_{norm}}{2} \]
      where:
-     - $n_{transactions}$ is the number of transactions in 6 months
-     - $avg\_amount$ is the average transaction amount
-     - Normalization factors: 180 days (6 months), 30 days (monthly), $1000 (amount threshold)
+     - \(n_{transactions}\) is the number of transactions in 6 months
+     - \(avg\_amount\) is the average transaction amount
+     - Normalization factors: 180 days (6 months), 30 days (monthly), \$1000 (amount threshold)
    - Prediction Algorithm Steps:
      1. Group transactions by category
      2. Calculate average time between transactions
@@ -113,7 +113,7 @@ graph TD
      }
      ```
    - Mathematical model:
-     $$ category\_percentage = \frac{total\_amount\_in\_category}{total\_amount\_all\_categories} \times 100 $$
+     \[ category\_percentage = \frac{total\_amount\_in\_category}{total\_amount\_all\_categories} \times 100 \]
    - SQL Query Used:
      ```sql
      SELECT category, COALESCE(SUM(ABS(amount)), 0) as total
