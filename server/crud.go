@@ -2,46 +2,187 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"server/types"
+	"time"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
-//create, read, update, delete
+func createTables(db *sql.DB) error {
+	// Drop existing tables
+	dropTables := `
+		DROP TABLE IF EXISTS transactions;
+		DROP TABLE IF EXISTS bank_details;
+		DROP TABLE IF EXISTS users;`
+	
+	if _, err := db.Exec(dropTables); err != nil {
+		return fmt.Errorf("failed to drop tables: %w", err)
+	}
 
-/** @dev
- * @param db *sql.DB
- * @param accountID string
- * @return []Transaction, error
- */
+	// Create users table
+	createUsers := `
+		CREATE TABLE users (
+			account_id VARCHAR(20) PRIMARY KEY,
+			account_name VARCHAR(50),
+			account_type VARCHAR(20),
+			account_number VARCHAR(20),
+			balance_current DECIMAL(10, 2),
+			balance_available DECIMAL(10, 2),
+			balance_currency VARCHAR(3),
+			owner_name VARCHAR(50)
+		)`
+	
+	if _, err := db.Exec(createUsers); err != nil {
+		return fmt.Errorf("failed to create users table: %w", err)
+	}
 
-/**
+	// Create bank_details table
+	createBankDetails := `
+		CREATE TABLE bank_details (
+			account_id VARCHAR(20) PRIMARY KEY REFERENCES users(account_id),
+			bank_name VARCHAR(50),
+			routing_number VARCHAR(20),
+			branch VARCHAR(100)
+		)`
+	
+	if _, err := db.Exec(createBankDetails); err != nil {
+		return fmt.Errorf("failed to create bank_details table: %w", err)
+	}
 
-First what we are going to do is add the user account,
-the account will contain these values
-account_id
-account_name
-account_type
-account_number
-balance
-	current
-	available
-	currency
-owner_name
-bank_details
-	bank_name
-	routing_number
-	branch
-*/
+	// Create transactions table
+	createTransactions := `
+		CREATE TABLE transactions (
+			transaction_id VARCHAR(20) PRIMARY KEY,
+			account_id VARCHAR(20) REFERENCES users(account_id),
+			date TIMESTAMP,
+			amount DECIMAL(10, 2),
+			category VARCHAR(50),
+			merchant VARCHAR(50),
+			location VARCHAR(100)
+		)`
+	
+	if _, err := db.Exec(createTransactions); err != nil {
+		return fmt.Errorf("failed to create transactions table: %w", err)
+	}
 
-func createUser(db *sql.DB, user *types.User) error {
-	// First insert the user's basic information
+	return nil
+}
+
+// InsertJaneData reads JaneDoe.json and inserts the data into the database
+func InsertJaneData(db *sql.DB) error {
+	// Read JSON file
+	data, err := os.ReadFile("JaneDoe.json")
+	if err != nil {
+		return fmt.Errorf("failed to read JSON file: %w", err)
+	}
+
+	// Parse JSON
+	var jsonData struct {
+		Account struct {
+			AccountID     string `json:"account_id"`
+			AccountName   string `json:"account_name"`
+			AccountType   string `json:"account_type"`
+			AccountNumber string `json:"account_number"`
+			Balance       struct {
+				Current   float64 `json:"current"`
+				Available float64 `json:"available"`
+				Currency  string  `json:"currency"`
+			} `json:"balance"`
+			OwnerName   string `json:"owner_name"`
+			BankDetails struct {
+				BankName      string `json:"bank_name"`
+				RoutingNumber string `json:"routing_number"`
+				Branch        string `json:"branch"`
+			} `json:"bank_details"`
+			Transactions []struct {
+				TransactionID string  `json:"transaction_id"`
+				Date         string  `json:"date"`
+				Amount       float64 `json:"amount"`
+				Category     string  `json:"category"`
+				Merchant     string  `json:"merchant"`
+				Location     string  `json:"location"`
+			} `json:"transactions"`
+		} `json:"account"`
+	}
+
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Begin transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Insert user
+	user := &types.User{
+		AccountID:     jsonData.Account.AccountID,
+		AccountName:   jsonData.Account.AccountName,
+		AccountType:   jsonData.Account.AccountType,
+		AccountNumber: jsonData.Account.AccountNumber,
+		Balance: types.UserBalance{
+			Current:   jsonData.Account.Balance.Current,
+			Available: jsonData.Account.Balance.Available,
+			Currency:  jsonData.Account.Balance.Currency,
+		},
+		OwnerName: jsonData.Account.OwnerName,
+		BankDetails: types.UserBankDetails{
+			BankName:      jsonData.Account.BankDetails.BankName,
+			RoutingNumber: jsonData.Account.BankDetails.RoutingNumber,
+			Branch:        jsonData.Account.BankDetails.Branch,
+		},
+	}
+
+	if err := createUserTx(tx, user); err != nil {
+		return fmt.Errorf("failed to insert user: %w", err)
+	}
+
+	// Insert transactions
+	for _, t := range jsonData.Account.Transactions {
+		date, err := time.Parse("2006-01-02", t.Date)
+		if err != nil {
+			return fmt.Errorf("failed to parse date %s: %w", t.Date, err)
+		}
+
+		transaction := &types.Transaction{
+			TransactionID: t.TransactionID,
+			AccountID:    jsonData.Account.AccountID,
+			Date:        date,
+			Amount:      t.Amount,
+			Category:    t.Category,
+			Merchant:    t.Merchant,
+			Location:    t.Location,
+		}
+
+		if err := insertTransactionTx(tx, transaction); err != nil {
+			return fmt.Errorf("failed to insert transaction %s: %w", t.TransactionID, err)
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// createUserTx creates a user within a transaction
+func createUserTx(tx *sql.Tx, user *types.User) error {
 	query := `
 		INSERT INTO users (
 			account_id, account_name, account_type, account_number, 
 			owner_name, balance_current, balance_available, balance_currency
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-	_, err := db.Exec(query,
+	_, err := tx.Exec(query,
 		user.AccountID,
 		user.AccountName,
 		user.AccountType,
@@ -52,26 +193,55 @@ func createUser(db *sql.DB, user *types.User) error {
 		user.Balance.Currency,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %w", err)
+		return err
 	}
 
-	// Then insert bank details
 	bankQuery := `
 		INSERT INTO bank_details (
 			account_id, bank_name, routing_number, branch
 		) VALUES ($1, $2, $3, $4)`
 
-	_, err = db.Exec(bankQuery,
+	_, err = tx.Exec(bankQuery,
 		user.AccountID,
 		user.BankDetails.BankName,
 		user.BankDetails.RoutingNumber,
 		user.BankDetails.Branch,
 	)
+	return err
+}
+
+// insertTransactionTx inserts a transaction within a transaction
+func insertTransactionTx(tx *sql.Tx, transaction *types.Transaction) error {
+	query := `
+		INSERT INTO transactions (
+			transaction_id, account_id, date, amount, category, merchant, location
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	
+	_, err := tx.Exec(query,
+		transaction.TransactionID,
+		transaction.AccountID,
+		transaction.Date,
+		transaction.Amount,
+		transaction.Category,
+		transaction.Merchant,
+		transaction.Location,
+	)
+	return err
+}
+
+func createUser(db *sql.DB, user *types.User) error {
+	// Begin transaction
+	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to insert bank details: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := createUserTx(tx, user); err != nil {
+		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func getTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) { 
@@ -79,17 +249,13 @@ func getTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) 
 		SELECT transaction_id, account_id, date, amount, category, merchant, location 
 		FROM transactions 
 		WHERE account_id = $1
-		ORDER BY date DESC` //SQL query to get transactions for a given account ID
+		ORDER BY date DESC`
 	
 	rows, err := db.Query(query, accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	/** @dev
-	 * @param rows *sql.Rows
-	 * @return []Transaction, error
-	 */
 
 	var transactions []types.Transaction
 	for rows.Next() {
@@ -105,7 +271,7 @@ func getTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) 
 		); err != nil {
 			return nil, err
 		}
-		transactions = append(transactions, t) /// add transaction to transactions slice
+		transactions = append(transactions, t)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -116,37 +282,61 @@ func getTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) 
 }
 
 func insertTransaction(db *sql.DB, transaction *types.Transaction) error {
-	query := `
-		INSERT INTO transactions (transaction_id, account_id, date, amount, category, merchant, location)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)` // INSERT INTO TABLE(column1, column2, column3, column4, column5, column6, column7) VALUES (value1, value2, value3, value4, value5, value6, value7)
-	
-	_, err := db.Exec(query,
-		transaction.TransactionID,
-		transaction.AccountID,
-		transaction.Date,
-		transaction.Amount,
-		transaction.Category,
-		transaction.Merchant,
-		transaction.Location,
-	)
-	return err
-}
-
-
-//db *sql.DB: initializes database
-func getTransactionsGreaterThan100(db *sql.DB, accountID string) error {
-	query := `SELECT * 
-	FROM transactions
-	WHERE amount >= 100` 
-	rows, err := db.Query(query) // talks to the database
+	// Begin transaction
+	tx, err := db.Begin()
 	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := insertTransactionTx(tx, transaction); err != nil {
 		return err
 	}
-	defer rows.Close()
-	return nil
+
+	return tx.Commit()
 }
 
+func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file:", err)
+	}
 
-func main(){
-	
+	// Get database connection details from environment variables
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+
+	// Connect to PostgreSQL using the URL from .env
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		log.Fatal("Failed to ping database:", err)
+	}
+	log.Println("Successfully connected to database")
+
+	// Create tables
+	if err := createTables(db); err != nil {
+		log.Fatal("Failed to create tables:", err)
+	}
+	log.Println("Successfully created tables")
+
+	// Insert Jane's data
+	if err := InsertJaneData(db); err != nil {
+		log.Fatal("Failed to insert Jane's data:", err)
+	}
+	log.Println("Successfully inserted Jane's data")
+
+	// Verify data
+	transactions, err := getTransactions(db, "1234567890")
+	if err != nil {
+		log.Fatal("Failed to get transactions:", err)
+	}
+	log.Printf("Found %d transactions for Jane", len(transactions))
 }

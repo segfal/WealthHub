@@ -2,72 +2,59 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"server/analytics"
 
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	// Load environment variables
+	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading .env file:", err)
 	}
 
-	// Database connection string
-	dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"), //os searches thru ur operating system, Getenv has variables we dont want anyone to know
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-	)
+	// Get database connection details from environment variables
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
 
-	// Connect to database. Make sure you're allowed to talk to the database, makes sure it exists
+	// Connect to PostgreSQL using the URL from .env
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
 
-	// Test database connection
-	if err = db.Ping(); err != nil {
-		log.Fatal(err)
+	// Test connection
+	if err := db.Ping(); err != nil {
+		log.Fatal("Failed to ping database:", err)
 	}
+	log.Println("Successfully connected to database")
 
-	// Create router
-	router := mux.NewRouter()
+	// Initialize analytics components
+	analyticsRepo := analytics.NewPostgresRepository(db)
+	analyticsService := analytics.NewService(analyticsRepo)
+	analyticsHandler := analytics.NewHandler(analyticsService)
 
-	// Setup CORS
-	router.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
+	// Create router and register routes
+	mux := http.NewServeMux()
+	analyticsHandler.RegisterRoutes(mux)
 
-	// Setup routes
-	setupRoutes(router, db)
-
-	// Start server
+	// Get port from environment variable or use default
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	
+
+	// Start server
 	log.Printf("Server starting on port %s...\n", port)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal(err)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatal("Server failed to start:", err)
 	}
 }
 
