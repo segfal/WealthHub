@@ -2,89 +2,10 @@ package analytics
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"server/types"
 )
 
-type repository struct {
-	db *sql.DB
-}
-
-func NewRepository(db *sql.DB) Repository {
-	if db == nil {
-		panic("database connection is required")
-	}
-	return &repository{db: db}
-}
-
-func (r *repository) GetTransactions(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error) {
-	if accountID == "" {
-		return nil, fmt.Errorf("account ID is required")
-	}
-
-	query := `
-		SELECT amount, category, date 
-		FROM transactions 
-		WHERE account_id = $1 
-		  AND date >= NOW() - $2::INTERVAL
-		ORDER BY date DESC`
-	
-	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query transactions: %w", err)
-	}
-	defer rows.Close()
-
-	var transactions []types.Transaction
-	for rows.Next() {
-		var t types.Transaction
-		if err := rows.Scan(&t.Amount, &t.Category, &t.Date); err != nil {
-			return nil, fmt.Errorf("failed to scan transaction: %w", err)
-		}
-		transactions = append(transactions, t)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating transactions: %w", err)
-	}
-
-	return transactions, nil
-}
-
-func (r *repository) GetCategoryTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error) {
-	if accountID == "" {
-		return nil, fmt.Errorf("account ID is required")
-	}
-
-	query := `
-		SELECT category, COALESCE(SUM(amount), 0) as total
-		FROM transactions 
-		WHERE account_id = $1 
-		  AND date >= NOW() - $2::INTERVAL
-		GROUP BY category
-		HAVING SUM(amount) > 0
-		ORDER BY total DESC`
-	
-	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query category totals: %w", err)
-	}
-	defer rows.Close()
-
-	categoryTotals := make(map[string]float64)
-	for rows.Next() {
-		var category string
-		var total float64
-		if err := rows.Scan(&category, &total); err != nil {
-			return nil, fmt.Errorf("failed to scan category total: %w", err)
-		}
-		categoryTotals[category] = total
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating category totals: %w", err)
-	}
-
-	return categoryTotals, nil
+type Repository interface {
+	GetTransactions(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error)
+	GetCategoryTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error)
 } 
