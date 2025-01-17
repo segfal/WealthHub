@@ -61,9 +61,7 @@ graph TD
      }
      ```
    - Mathematical model for average spend calculation:
-     ```latex
-     A_{spend}(d,h) = \frac{\sum_{t \in T_{d,h}} |amount(t)|}{|T_{d,h}|}
-     ```
+     $$ A_{spend}(d,h) = \frac{\sum_{t \in T_{d,h}} |amount(t)|}{|T_{d,h}|} $$
      where:
      - $A_{spend}(d,h)$ is the average spend for day $d$ and hour $h$
      - $T_{d,h}$ is the set of transactions at day $d$ and hour $h$
@@ -89,11 +87,9 @@ graph TD
      }
      ```
    - Mathematical models:
-     ```latex
-     frequency_{norm} = min(\frac{n_{transactions}}{180} \times 30, 1.0)
-     amount_{norm} = min(\frac{avg\_amount}{1000}, 1.0)
-     likelihood = \frac{frequency_{norm} + amount_{norm}}{2}
-     ```
+     $$ frequency_{norm} = min(\frac{n_{transactions}}{180} \times 30, 1.0) $$
+     $$ amount_{norm} = min(\frac{avg\_amount}{1000}, 1.0) $$
+     $$ likelihood = \frac{frequency_{norm} + amount_{norm}}{2} $$
      where:
      - $n_{transactions}$ is the number of transactions in 6 months
      - $avg\_amount$ is the average transaction amount
@@ -117,9 +113,7 @@ graph TD
      }
      ```
    - Mathematical model:
-     ```latex
-     category\_percentage = \frac{total\_amount\_in\_category}{total\_amount\_all\_categories} \times 100
-     ```
+     $$ category\_percentage = \frac{total\_amount\_in\_category}{total\_amount\_all\_categories} \times 100 $$
    - SQL Query Used:
      ```sql
      SELECT category, COALESCE(SUM(ABS(amount)), 0) as total
