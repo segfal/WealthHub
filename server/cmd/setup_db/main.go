@@ -41,16 +41,19 @@ func main() {
 	}
 	log.Println("Successfully created tables")
 
-	// Insert Jane's data
-	if err := crud.InsertJaneData(db); err != nil {
-		log.Fatal("Failed to insert Jane's data:", err)
+	// Insert all user data
+	if err := crud.InsertAllUserData(db); err != nil {
+		log.Fatal("Failed to insert user data:", err)
 	}
-	log.Println("Successfully inserted Jane's data")
+	log.Println("Successfully inserted all user data")
 
 	// Verify data
-	transactions, err := crud.GetTransactions(db, "1234567891")
-	if err != nil {
-		log.Fatal("Failed to get transactions:", err)
+	for _, accountID := range []string{"1234567890", "1234567891", "1234567892", "1234567893"} {
+		transactions, err := crud.GetTransactions(db, accountID)
+		if err != nil {
+			log.Printf("Failed to get transactions for account %s: %v", accountID, err)
+			continue
+		}
+		log.Printf("Found %d transactions for account %s", len(transactions), accountID)
 	}
-	log.Printf("Found %d transactions for Jane", len(transactions))
 } 

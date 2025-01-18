@@ -60,13 +60,12 @@ func CreateTables(db *sql.DB) error {
 	return nil
 }
 
-// InsertJaneData reads JaneDoe.json and inserts the data into the database 
-//TO-DO
-func InsertJaneData(db *sql.DB) error {
+// InsertUserData reads a user's JSON file and inserts the data into the database
+func InsertUserData(db *sql.DB, filename string) error {
 	// Read JSON file
-	data, err := os.ReadFile("JaneDoe.json")
+	data, err := os.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("failed to read JSON file: %w", err)
+		return fmt.Errorf("failed to read JSON file %s: %w", filename, err)
 	}
 
 	// Parse JSON
@@ -103,10 +102,10 @@ func InsertJaneData(db *sql.DB) error {
 	}
 
 	if err := json.Unmarshal(data, &jsonData); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
+		return fmt.Errorf("failed to parse JSON from %s: %w", filename, err)
 	}
 
-	fmt.Printf("Found %d transactions in JSON file\n", len(jsonData.Account.Transactions))
+	fmt.Printf("Processing %s: Found %d transactions\n", filename, len(jsonData.Account.Transactions))
 
 	// Begin transaction
 	tx, err := db.Begin()
@@ -115,16 +114,20 @@ func InsertJaneData(db *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	// Insert user with bank details
+	// Insert user with bank details using ON CONFLICT DO NOTHING
 	userQuery := `
 		INSERT INTO users (
 			account_id, account_name, account_type, account_number, 
 			owner_name, balance_current, balance_available, balance_currency,
 			bank_name, routing_number, branch
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (account_id) DO UPDATE SET
+			account_name = EXCLUDED.account_name,
+			balance_current = EXCLUDED.balance_current,
+			balance_available = EXCLUDED.balance_available`
 
 	_, err = tx.Exec(userQuery,
-		fmt.Sprintf("%d", jsonData.Account.AccountID), // Convert int to string
+		fmt.Sprintf("%d", jsonData.Account.AccountID),
 		jsonData.Account.AccountName,
 		jsonData.Account.AccountType,
 		jsonData.Account.AccountNumber,
@@ -137,25 +140,42 @@ func InsertJaneData(db *sql.DB) error {
 		jsonData.Account.BankDetails.Branch,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %w", err)
+		return fmt.Errorf("failed to insert user data from %s: %w", filename, err)
 	}
 
-	// Batch insert transactions
-	if len(jsonData.Account.Transactions) > 0 {
-		// Create batch insert query
-		valueStrings := make([]string, 0, len(jsonData.Account.Transactions))
-		valueArgs := make([]interface{}, 0, len(jsonData.Account.Transactions)*7)
-		for i, t := range jsonData.Account.Transactions {
+	// Get user prefix from filename (e.g., "jane" from "JaneDoe.json")
+	userPrefix := strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(filename, ".json"), "Doe"))
+
+	// Batch insert transactions in chunks of 100
+	const batchSize = 100
+	totalTransactions := len(jsonData.Account.Transactions)
+	successfulInserts := 0
+
+	for i := 0; i < totalTransactions; i += batchSize {
+		end := i + batchSize
+		if end > totalTransactions {
+			end = totalTransactions
+		}
+
+		batch := jsonData.Account.Transactions[i:end]
+		valueStrings := make([]string, 0, len(batch))
+		valueArgs := make([]interface{}, 0, len(batch)*7)
+
+		for j, t := range batch {
 			date, err := time.Parse("2006-01-02", t.Date)
 			if err != nil {
-				return fmt.Errorf("failed to parse date %s: %w", t.Date, err)
+				fmt.Printf("Warning: Skipping transaction with invalid date %s in %s: %v\n", t.Date, filename, err)
+				continue
 			}
 			
+			// Create unique transaction ID by prefixing with user identifier
+			uniqueTransactionID := fmt.Sprintf("%s_%s", userPrefix, t.TransactionID)
+			
 			valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
-				i*7+1, i*7+2, i*7+3, i*7+4, i*7+5, i*7+6, i*7+7))
+				j*7+1, j*7+2, j*7+3, j*7+4, j*7+5, j*7+6, j*7+7))
 			valueArgs = append(valueArgs, 
-				t.TransactionID,
-				fmt.Sprintf("%d", t.AccountID), // Convert int to string
+				uniqueTransactionID,
+				fmt.Sprintf("%d", t.AccountID),
 				date,
 				t.Amount,
 				t.Category,
@@ -163,22 +183,47 @@ func InsertJaneData(db *sql.DB) error {
 				t.Location)
 		}
 
-		fmt.Printf("Inserting %d transactions\n", len(valueStrings))
+		if len(valueStrings) > 0 {
+			transactionQuery := fmt.Sprintf(`
+				INSERT INTO transactions (
+					transaction_id, account_id, date, amount, category, merchant, location
+				) VALUES %s
+				ON CONFLICT (transaction_id) DO NOTHING`, strings.Join(valueStrings, ","))
+			
+			result, err := tx.Exec(transactionQuery, valueArgs...)
+			if err != nil {
+				fmt.Printf("Warning: Failed to insert batch from %s: %v\n", filename, err)
+				continue
+			}
 
-		transactionQuery := fmt.Sprintf(`
-			INSERT INTO transactions (
-				transaction_id, account_id, date, amount, category, merchant, location
-			) VALUES %s`, strings.Join(valueStrings, ","))
-		
-		_, err = tx.Exec(transactionQuery, valueArgs...)
-		if err != nil {
-			return fmt.Errorf("failed to insert transactions: %w", err)
+			inserted, _ := result.RowsAffected()
+			successfulInserts += int(inserted)
+			fmt.Printf("Batch processed for %s: %d/%d transactions inserted\n", filename, inserted, len(batch))
 		}
 	}
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("failed to commit transaction for %s: %w", filename, err)
+	}
+
+	fmt.Printf("Successfully processed %s: %d/%d transactions inserted\n", filename, successfulInserts, totalTransactions)
+	return nil
+}
+
+// InsertAllUserData inserts data for all users
+func InsertAllUserData(db *sql.DB) error {
+	users := []string{
+		"JaneDoe.json",
+		"JohnDoe.json",
+		"JillDoe.json",
+		"JakeDoe.json",
+	}
+
+	for _, user := range users {
+		if err := InsertUserData(db, user); err != nil {
+			return fmt.Errorf("failed to insert data for %s: %w", user, err)
+		}
 	}
 
 	return nil
@@ -221,7 +266,6 @@ func CreateUser(db *sql.DB, user *types.User) error {
 
 // GetTransactions retrieves all transactions for a given account
 func GetTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) { 
-	// Convert string account ID to integer for comparison
 	query := ` 
 		SELECT transaction_id, account_id, date, amount, category, merchant, location 
 		FROM transactions 
@@ -237,10 +281,10 @@ func GetTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) 
 	var transactions []types.Transaction
 	for rows.Next() {
 		var t types.Transaction
-		var accountIDStr string
+		var prefixedTransactionID string
 		if err := rows.Scan(
-			&t.TransactionID,
-			&accountIDStr,
+			&prefixedTransactionID,
+			&t.AccountID,
 			&t.Date,
 			&t.Amount,
 			&t.Category,
@@ -249,10 +293,16 @@ func GetTransactions(db *sql.DB, accountID string) ([]types.Transaction, error) 
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan transaction: %w", err)
 		}
-		t.AccountID = accountIDStr
+		// Extract the original transaction ID by removing the prefix (e.g., "jane_123" -> "123")
+		parts := strings.SplitN(prefixedTransactionID, "_", 2)
+		if len(parts) == 2 {
+			t.TransactionID = parts[1]  // Use the part after the prefix
+			t.UserPrefix = parts[0]     // Store the prefix (user identifier) if needed
+		} else {
+			t.TransactionID = prefixedTransactionID  // Fallback to full ID if no prefix found
+		}
 		transactions = append(transactions, t)
 	}
-
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating transactions: %w", err)
 	}

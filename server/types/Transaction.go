@@ -10,4 +10,5 @@ type Transaction struct {
 	Category      string    `json:"category"`
 	Merchant      string    `json:"merchant"`
 	Location      string    `json:"location"`
+	UserPrefix    string    `json:"userPrefix,omitempty"`
 }
