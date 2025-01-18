@@ -60,7 +60,8 @@ func CreateTables(db *sql.DB) error {
 	return nil
 }
 
-// InsertJaneData reads JaneDoe.json and inserts the data into the database
+// InsertJaneData reads JaneDoe.json and inserts the data into the database 
+//TO-DO
 func InsertJaneData(db *sql.DB) error {
 	// Read JSON file
 	data, err := os.ReadFile("JaneDoe.json")
