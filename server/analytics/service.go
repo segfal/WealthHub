@@ -10,12 +10,6 @@ import (
 	"time"
 )
 
-type Service interface {
-	GetSpendingAnalytics(ctx context.Context, accountID string, timeRange string) (*types.SpendingAnalytics, error)
-	AnalyzeTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error)
-	PredictFutureSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error)
-}
-
 type service struct {
 	repo Repository
 }
@@ -24,7 +18,61 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) AnalyzeTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error) {
+// AnalyzeSpending implements Service.AnalyzeSpending
+func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRange string) (*types.SpendingAnalytics, error) {
+	categoryTotals, err := s.repo.GetCategoryTotals(ctx, accountID, timeRange)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get category totals: %w", err)
+	}
+
+	var totalSpent float64
+	var topCategories []types.CategorySpend
+	for category, amount := range categoryTotals {
+		totalSpent += amount
+		topCategories = append(topCategories, types.CategorySpend{
+			Category:   category,
+			TotalSpent: fmt.Sprintf("%.2f", amount),
+			Percentage: fmt.Sprintf("%.2f", (amount/totalSpent)*100),
+		})
+	}
+
+	// Sort by amount spent
+	sort.Slice(topCategories, func(i, j int) bool {
+		amtI, _ := strconv.ParseFloat(topCategories[i].TotalSpent, 64)
+		amtJ, _ := strconv.ParseFloat(topCategories[j].TotalSpent, 64)
+		return amtI > amtJ
+	})
+
+	// Get top 5 categories
+	if len(topCategories) > 5 {
+		topCategories = topCategories[:5]
+	}
+
+	// Get time patterns for the last month
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, -1, 0)
+	patterns, err := s.GetTimePatterns(ctx, accountID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze time patterns: %w", err)
+	}
+
+	// Get spending predictions
+	predictions, err := s.PredictSpending(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to predict spending: %w", err)
+	}
+
+	return &types.SpendingAnalytics{
+		TopCategories:     topCategories,
+		SpendingPatterns: patterns,
+		PredictedSpending: predictions,
+		TotalSpent:       totalSpent,
+		MonthlyAverage:   totalSpent / float64(timeRangeToMonths(timeRange)),
+	}, nil
+}
+
+// GetTimePatterns implements Service.GetTimePatterns
+func (s *service) GetTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error) {
 	transactions, err := s.repo.GetTransactions(ctx, accountID, fmt.Sprintf("'%s'::timestamp - '%s'::timestamp", endDate.Format(time.RFC3339), startDate.Format(time.RFC3339)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transactions: %w", err)
@@ -77,59 +125,8 @@ func (s *service) AnalyzeTimePatterns(ctx context.Context, accountID string, sta
 	return result, nil
 }
 
-func (s *service) GetSpendingAnalytics(ctx context.Context, accountID string, timeRange string) (*types.SpendingAnalytics, error) {
-	categoryTotals, err := s.repo.GetCategoryTotals(ctx, accountID, timeRange)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get category totals: %w", err)
-	}
-
-	var totalSpent float64
-	var topCategories []types.CategorySpend
-	for category, amount := range categoryTotals {
-		totalSpent += amount
-		topCategories = append(topCategories, types.CategorySpend{
-			Category:   category,
-			TotalSpent: fmt.Sprintf("%.2f", amount),
-			Percentage: fmt.Sprintf("%.2f", (amount/totalSpent)*100),
-		})
-	}
-
-	// Sort by amount spent
-	sort.Slice(topCategories, func(i, j int) bool {
-		amtI, _ := strconv.ParseFloat(topCategories[i].TotalSpent, 64)
-		amtJ, _ := strconv.ParseFloat(topCategories[j].TotalSpent, 64)
-		return amtI > amtJ
-	})
-
-	// Get top 5 categories
-	if len(topCategories) > 5 {
-		topCategories = topCategories[:5]
-	}
-
-	// Get time patterns for the last month
-	endDate := time.Now()
-	startDate := endDate.AddDate(0, -1, 0)
-	patterns, err := s.AnalyzeTimePatterns(ctx, accountID, startDate, endDate)
-	if err != nil {
-		return nil, fmt.Errorf("failed to analyze time patterns: %w", err)
-	}
-
-	// Get spending predictions
-	predictions, err := s.PredictFutureSpending(ctx, accountID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to predict spending: %w", err)
-	}
-
-	return &types.SpendingAnalytics{
-		TopCategories:     topCategories,
-		SpendingPatterns: patterns,
-		PredictedSpending: predictions,
-		TotalSpent:       totalSpent,
-		MonthlyAverage:   totalSpent / float64(timeRangeToMonths(timeRange)),
-	}, nil
-}
-
-func (s *service) PredictFutureSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error) {
+// PredictSpending implements Service.PredictSpending
+func (s *service) PredictSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error) {
 	// Get last 6 months of transactions for better prediction
 	transactions, err := s.repo.GetTransactions(ctx, accountID, "6 months")
 	if err != nil {

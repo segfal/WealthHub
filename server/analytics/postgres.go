@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"server/types"
+	"strings"
 )
 
 type postgresRepo struct {
@@ -39,8 +40,9 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 	var transactions []types.Transaction
 	for rows.Next() {
 		var t types.Transaction
+		var prefixedTransactionID string
 		if err := rows.Scan(
-			&t.TransactionID,
+			&prefixedTransactionID,
 			&t.AccountID,
 			&t.Date,
 			&t.Amount,
@@ -50,6 +52,16 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan transaction: %w", err)
 		}
+
+		// Extract the original transaction ID by removing the prefix
+		parts := strings.SplitN(prefixedTransactionID, "_", 2)
+		if len(parts) == 2 {
+			t.TransactionID = parts[1]
+			t.UserPrefix = parts[0]
+		} else {
+			t.TransactionID = prefixedTransactionID
+		}
+
 		transactions = append(transactions, t)
 	}
 

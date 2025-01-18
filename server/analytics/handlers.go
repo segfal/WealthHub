@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -11,103 +12,113 @@ type Handler struct {
 }
 
 func NewHandler(service Service) *Handler {
-	if service == nil {
-		panic("service is required")
-	}
 	return &Handler{service: service}
 }
 
+// RegisterRoutes registers all analytics routes with the provided mux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/analytics/", h.handleAnalytics)
-	mux.HandleFunc("/api/patterns/", h.handlePatterns)
-	mux.HandleFunc("/api/predictions/", h.handlePredictions)
+	mux.HandleFunc("/api/analytics/spending", h.HandleSpendingAnalytics)
+	mux.HandleFunc("/api/analytics/patterns", h.HandleTimePatterns)
+	mux.HandleFunc("/api/analytics/predictions", h.HandlePredictions)
 }
 
-func (h *Handler) handleAnalytics(w http.ResponseWriter, r *http.Request) {
+// HandleSpendingAnalytics handles GET requests for spending analytics
+func (h *Handler) HandleSpendingAnalytics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleError(w, ErrMethodNotAllowed, http.StatusMethodNotAllowed)
 		return
 	}
 
-	accountID := r.URL.Path[len("/api/analytics/"):]
+	// Get account ID from URL parameters
+	accountID := r.URL.Query().Get("accountId")
 	if accountID == "" {
-		http.Error(w, "Account ID is required", http.StatusBadRequest)
+		handleError(w, ErrMissingAccountID, http.StatusBadRequest)
 		return
 	}
 
+	// Get time range from query parameters (default to 1 month)
 	timeRange := r.URL.Query().Get("timeRange")
 	if timeRange == "" {
-		timeRange = "1 month" // Default time range
+		timeRange = "1 month"
 	}
 
-	analytics, err := h.service.GetSpendingAnalytics(r.Context(), accountID, timeRange)
+	// Get analytics
+	analytics, err := h.service.AnalyzeSpending(r.Context(), accountID, timeRange)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Return response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(analytics)
 }
 
-func (h *Handler) handlePatterns(w http.ResponseWriter, r *http.Request) {
+// HandleTimePatterns handles GET requests for time-based spending patterns
+func (h *Handler) HandleTimePatterns(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleError(w, ErrMethodNotAllowed, http.StatusMethodNotAllowed)
 		return
 	}
 
-	accountID := r.URL.Path[len("/api/patterns/"):]
+	// Get account ID from URL parameters
+	accountID := r.URL.Query().Get("accountId")
 	if accountID == "" {
-		http.Error(w, "Account ID is required", http.StatusBadRequest)
+		handleError(w, ErrMissingAccountID, http.StatusBadRequest)
 		return
 	}
 
-	// Default to last month if no dates provided
+	// Get date range from query parameters (default to last month)
 	endDate := time.Now()
 	startDate := endDate.AddDate(0, -1, 0)
 
-	// Parse date parameters if provided
-	if start := r.URL.Query().Get("start"); start != "" {
-		parsedStart, err := time.Parse("2006-01-02", start)
-		if err == nil {
-			startDate = parsedStart
-		}
-	}
-	if end := r.URL.Query().Get("end"); end != "" {
-		parsedEnd, err := time.Parse("2006-01-02", end)
-		if err == nil {
-			endDate = parsedEnd
-		}
-	}
-
-	patterns, err := h.service.AnalyzeTimePatterns(r.Context(), accountID, startDate, endDate)
+	// Get patterns
+	patterns, err := h.service.GetTimePatterns(r.Context(), accountID, startDate, endDate)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Return response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(patterns)
 }
 
-func (h *Handler) handlePredictions(w http.ResponseWriter, r *http.Request) {
+// HandlePredictions handles GET requests for spending predictions
+func (h *Handler) HandlePredictions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		handleError(w, ErrMethodNotAllowed, http.StatusMethodNotAllowed)
 		return
 	}
 
-	accountID := r.URL.Path[len("/api/predictions/"):]
+	// Get account ID from URL parameters
+	accountID := r.URL.Query().Get("accountId")
 	if accountID == "" {
-		http.Error(w, "Account ID is required", http.StatusBadRequest)
+		handleError(w, ErrMissingAccountID, http.StatusBadRequest)
 		return
 	}
 
-	predictions, err := h.service.PredictFutureSpending(r.Context(), accountID)
+	// Get predictions
+	predictions, err := h.service.PredictSpending(r.Context(), accountID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
+	// Return response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(predictions)
-} 
+}
+
+func handleError(w http.ResponseWriter, err error, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": err.Error(),
+	})
+}
+
+var (
+	ErrMethodNotAllowed = errors.New("method not allowed")
+	ErrMissingAccountID = errors.New("account ID is required")
+) 
