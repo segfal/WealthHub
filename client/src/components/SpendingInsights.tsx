@@ -18,26 +18,71 @@ const EXCLUDED_CATEGORIES = new Set([
 
 // Emoji mappings for different merchants/categories
 const MERCHANT_EMOJIS: { [key: string]: string } = {
+  // Shopping
   'Amazon.com': '📦',
-  'Netflix': '🎬',
-  'Spotify': '🎵',
-  'Uber': '🚗',
-  'Uber Eats': '🥡',
-  'DoorDash': '🛵',
-  'Starbucks': '☕',
   'Target': '🎯',
   'Walmart': '🛒',
-  'Apple': '🍎',
+  'Best Buy': '🔌',
+  'Home Depot': '🏠',
+  'IKEA': '🪑',
+  
+  // Entertainment
+  'Netflix': '🎬',
+  'Spotify': '🎵',
+  'Apple Music': '🎧',
   'Steam': '🎮',
-  'Airlines': '✈️',
-  'Hotel': '🏨',
+  'PlayStation': '🕹️',
+  'Xbox': '🎯',
+  'AMC Theaters': '🍿',
+  'Regal Cinemas': '🎦',
+  
+  // Transportation
+  'Uber': '🚗',
+  'Lyft': '🚙',
+  'Shell': '⛽',
+  'Chevron': '⛽',
+  'Delta Airlines': '✈️',
+  'United Airlines': '✈️',
+  'American Airlines': '✈️',
+  
+  // Food & Dining
+  'Uber Eats': '🥡',
+  'DoorDash': '🛵',
+  'GrubHub': '🍽️',
+  'Starbucks': '☕',
+  'Dunkin': '🍩',
+  'McDonalds': '🍔',
+  'Chipotle': '🌯',
+  'Subway': '🥖',
+  'Pizza Hut': '🍕',
+  'Dominos': '🍕',
+  
+  // Travel & Hotels
+  'Airbnb': '🏡',
+  'Hotels.com': '🏨',
+  'Marriott': '🏨',
+  'Hilton': '🏨',
+  'Expedia': '🌎',
+  
+  // General Categories
   'Restaurant': '🍽️',
   'Bar': '🍺',
   'Grocery': '🛒',
   'Clothing': '👕',
   'Entertainment': '🎭',
   'Books': '📚',
-  'Online': '💻'
+  'Online': '💻',
+  'Pharmacy': '💊',
+  'Health': '🏥',
+  'Fitness': '🏋️',
+  'Sports': '⚽',
+  'Education': '📚',
+  'Pet Supplies': '🐾',
+  'Beauty': '💄',
+  'Gaming': '🎮',
+  'Music': '🎵',
+  'Movies': '🎬',
+  'Coffee Shop': '☕'
 };
 
 interface Transaction {
@@ -143,10 +188,22 @@ const SpendingInsights = () => {
     switch (category.toLowerCase()) {
       case 'shopping': return <ShoppingBag className="w-5 h-5" />;
       case 'coffee': return <Coffee className="w-5 h-5" />;
-      case 'dining': return <Utensils className="w-5 h-5" />;
+      case 'dining': 
+      case 'restaurants': 
+      case 'food': return <Utensils className="w-5 h-5" />;
       case 'travel': return <Plane className="w-5 h-5" />;
-      case 'books': return <Book className="w-5 h-5" />;
+      case 'books': 
+      case 'education': return <Book className="w-5 h-5" />;
       case 'electronics': return <Monitor className="w-5 h-5" />;
+      case 'entertainment': return <span className="text-xl">🎭</span>;
+      case 'groceries': return <span className="text-xl">🛒</span>;
+      case 'health': return <span className="text-xl">��</span>;
+      case 'fitness': return <span className="text-xl">🏋️</span>;
+      case 'pets': return <span className="text-xl">🐾</span>;
+      case 'beauty': return <span className="text-xl">💄</span>;
+      case 'gaming': return <span className="text-xl">🎮</span>;
+      case 'music': return <span className="text-xl">🎵</span>;
+      case 'movies': return <span className="text-xl">🎬</span>;
       default: return <Gift className="w-5 h-5" />;
     }
   };

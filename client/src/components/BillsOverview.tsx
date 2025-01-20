@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { Calendar, AlertTriangle, Loader2, Clock, DollarSign } from "lucide-react";
+import { AlertTriangle, Receipt, Calendar, Loader2 } from "lucide-react";
 
-// Categories that are considered bills
+// Categories that are considered bills/rent
 const BILL_CATEGORIES = new Set([
   'Rent',
   'Utilities',
@@ -21,14 +21,25 @@ interface Bill {
   amount: number;
   dueDate: string;
   merchant: string;
-  status: string;
+  status: 'paid' | 'upcoming' | 'overdue';
+}
+
+interface Transaction {
+  category: string;
+  amount: number;
+  date: string;
+  merchant: string;
+}
+
+interface SpendingResponse {
+  transactions: Transaction[];
 }
 
 const BillsOverview = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [totalMonthly, setTotalMonthly] = useState(0);
+  const [totalMonthlyBills, setTotalMonthlyBills] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -39,23 +50,27 @@ const BillsOverview = () => {
         }
         return res.json();
       })
-      .then(data => {
-        // Filter only bill transactions
-        const billTransactions = (data.transactions || [])
-          .filter((t: any) => BILL_CATEGORIES.has(t.category))
-          .map((t: any) => ({
-            category: t.category,
-            amount: Math.abs(t.amount),
-            dueDate: new Date(t.date).toLocaleDateString(),
-            merchant: t.merchant,
-            status: t.status
-          }));
+      .then((data: SpendingResponse) => {
+        if (!data || !data.transactions || !Array.isArray(data.transactions)) {
+          throw new Error('Invalid data format received from server');
+        }
 
-        // Calculate total monthly bills
-        const total = billTransactions.reduce((sum: number, bill: Bill) => sum + bill.amount, 0);
-        
-        setBills(billTransactions);
-        setTotalMonthly(total);
+        // Filter transactions to only include bills and recurring payments
+        const billTransactions = data.transactions.filter((t: Transaction) => 
+          t && t.category && BILL_CATEGORIES.has(t.category)
+        );
+
+        // Process transactions into bills
+        const processedBills = billTransactions.map((t: Transaction) => ({
+          category: t.category,
+          amount: Math.abs(t.amount),
+          dueDate: t.date,
+          merchant: t.merchant,
+          status: new Date(t.date) > new Date() ? 'upcoming' : 'paid'
+        }));
+
+        setBills(processedBills);
+        setTotalMonthlyBills(processedBills.reduce((sum, bill) => sum + bill.amount, 0));
         setError(null);
       })
       .catch(err => {
@@ -86,51 +101,54 @@ const BillsOverview = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Monthly Bills 📅</h2>
-        <div className="text-right">
-          <div className="text-sm text-gray-500">Total Monthly</div>
-          <div className="text-2xl font-bold">${totalMonthly.toFixed(2)}</div>
-        </div>
-      </div>
+      {/* Monthly Summary */}
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium flex items-center">
+              <Receipt className="w-5 h-5 mr-2" />
+              Monthly Bills & Recurring Payments
+            </h3>
+            <span className="text-2xl font-bold">${totalMonthlyBills.toFixed(2)}</span>
+          </div>
+          <p className="text-sm text-gray-500">
+            You have {bills.length} recurring payments this month
+          </p>
+        </Card>
+      </motion.div>
 
-      <div className="grid gap-4">
+      {/* Bills List */}
+      <div className="space-y-4">
         {bills.map((bill, index) => (
           <motion.div
             key={`${bill.category}-${bill.dueDate}`}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <Card className="p-4 hover:shadow-lg transition-shadow">
+            <Card className="p-4">
               <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    <DollarSign className="w-5 h-5 text-primary" />
+                <div>
+                  <h4 className="font-medium">{bill.category}</h4>
+                  <div className="flex items-center text-sm text-gray-500 mt-1">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    <span>Due {new Date(bill.dueDate).toLocaleDateString()}</span>
                   </div>
-                  <div>
-                    <h3 className="font-medium">{bill.category}</h3>
-                    <p className="text-sm text-gray-500">{bill.merchant}</p>
-                  </div>
+                  <div className="text-sm text-gray-500">{bill.merchant}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold">${bill.amount.toFixed(2)}</div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    Due: {bill.dueDate}
+                  <div className="text-lg font-medium">${bill.amount.toFixed(2)}</div>
+                  <div className={`text-sm mt-1 ${
+                    bill.status === 'paid' ? 'text-green-500' :
+                    bill.status === 'upcoming' ? 'text-yellow-500' :
+                    'text-red-500'
+                  }`}>
+                    {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
                   </div>
-                </div>
-              </div>
-              
-              <div className="mt-2 flex items-center justify-between">
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1 text-gray-500" />
-                  <span className="text-sm text-gray-500">Monthly</span>
-                </div>
-                <div className={`text-sm ${
-                  bill.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'
-                }`}>
-                  {bill.status}
                 </div>
               </div>
             </Card>

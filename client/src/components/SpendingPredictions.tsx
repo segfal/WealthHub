@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { AlertTriangle, Calendar, Loader2 } from "lucide-react";
+import { AlertTriangle, Calendar, Loader2, TrendingUp } from "lucide-react";
+
+// Categories that are considered bills/rent and should be excluded
+const EXCLUDED_CATEGORIES = new Set([
+  'Rent',
+  'Utilities',
+  'Insurance',
+  'Phone Bill',
+  'Internet',
+  'Mortgage',
+  'Water Bill',
+  'Electric Bill',
+  'Gas Bill'
+]);
 
 interface PredictedSpend {
   category: string;
   likelihood: number;
   predictedDate: string;
   warning: string;
+  amount: number;
 }
 
 const SpendingPredictions = () => {
@@ -28,7 +42,9 @@ const SpendingPredictions = () => {
         if (!Array.isArray(data)) {
           throw new Error('Invalid data format received from server');
         }
-        setPredictions(data);
+        // Filter out bills and rent from predictions
+        const filteredPredictions = data.filter(pred => !EXCLUDED_CATEGORIES.has(pred.category));
+        setPredictions(filteredPredictions);
         setError(null);
       })
       .catch(err => {
@@ -59,6 +75,17 @@ const SpendingPredictions = () => {
 
   return (
     <div className="space-y-4">
+      <Card className="p-6">
+        <div className="flex items-center mb-4">
+          <TrendingUp className="w-5 h-5 mr-2" />
+          <h3 className="text-lg font-medium">Discretionary Spending Predictions</h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Based on your spending patterns, here are likely upcoming expenses
+          (excluding bills and recurring payments)
+        </p>
+      </Card>
+
       {predictions.map((prediction, index) => (
         <motion.div
           key={prediction.category}
@@ -74,6 +101,11 @@ const SpendingPredictions = () => {
                   <Calendar className="w-4 h-4 mr-1" />
                   <span>Expected around {new Date(prediction.predictedDate).toLocaleDateString()}</span>
                 </div>
+                {prediction.amount && (
+                  <div className="text-sm font-medium mt-1">
+                    Estimated amount: ${prediction.amount.toFixed(2)}
+                  </div>
+                )}
               </div>
               {prediction.warning && (
                 <div className="flex items-center text-yellow-500">

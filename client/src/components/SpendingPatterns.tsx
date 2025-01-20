@@ -3,11 +3,25 @@ import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { Clock, TrendingUp, Loader2 } from "lucide-react";
 
+// Categories that are considered bills/rent and should be excluded
+const EXCLUDED_CATEGORIES = new Set([
+  'Rent',
+  'Utilities',
+  'Insurance',
+  'Phone Bill',
+  'Internet',
+  'Mortgage',
+  'Water Bill',
+  'Electric Bill',
+  'Gas Bill'
+]);
+
 interface TimePattern {
   timeOfDay: string;
   dayOfWeek: string;
   frequency: number;
   averageSpend: number;
+  category: string;
 }
 
 const SpendingPatterns = () => {
@@ -28,7 +42,9 @@ const SpendingPatterns = () => {
         if (!Array.isArray(data)) {
           throw new Error('Invalid data format received from server');
         }
-        setPatterns(data);
+        // Filter out bills and rent from patterns
+        const filteredPatterns = data.filter(pattern => !EXCLUDED_CATEGORIES.has(pattern.category));
+        setPatterns(filteredPatterns);
         setError(null);
       })
       .catch(err => {
@@ -65,7 +81,7 @@ const SpendingPatterns = () => {
     return acc;
   }, {});
 
-  // Calculate daily totals
+  // Calculate daily totals (excluding bills/rent)
   const dailyTotals = Object.entries(dayPatterns).map(([day, patterns]) => ({
     day,
     totalSpend: patterns.reduce((sum, p) => sum + p.averageSpend * p.frequency, 0),
@@ -83,7 +99,7 @@ const SpendingPatterns = () => {
         <Card className="p-6">
           <div className="flex items-center mb-4">
             <TrendingUp className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Spending by Day of Week</h3>
+            <h3 className="text-lg font-medium">Discretionary Spending by Day</h3>
           </div>
           <div className="space-y-4">
             {dailyTotals.map(({ day, totalSpend, totalTransactions }) => (
@@ -108,7 +124,7 @@ const SpendingPatterns = () => {
         <Card className="p-6">
           <div className="flex items-center mb-4">
             <Clock className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Most Active Times</h3>
+            <h3 className="text-lg font-medium">Most Active Shopping Times</h3>
           </div>
           <div className="space-y-4">
             {patterns
