@@ -9,7 +9,6 @@ import (
 	"server/types"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -84,7 +83,7 @@ func InsertJaneData(db *sql.DB) error {
 	// Parse JSON
 	var jsonData struct {
 		Account struct {
-			AccountID     string `json:"account_id"`
+			AccountID     int    `json:"account_id"`
 			AccountName   string `json:"account_name"`
 			AccountType   string `json:"account_type"`
 			AccountNumber string `json:"account_number"`
@@ -123,7 +122,7 @@ func InsertJaneData(db *sql.DB) error {
 
 	// Insert user
 	user := &types.User{
-		AccountID:     jsonData.Account.AccountID,
+		AccountID:     fmt.Sprintf("%d", jsonData.Account.AccountID),
 		AccountName:   jsonData.Account.AccountName,
 		AccountType:   jsonData.Account.AccountType,
 		AccountNumber: jsonData.Account.AccountNumber,
@@ -153,7 +152,7 @@ func InsertJaneData(db *sql.DB) error {
 
 		transaction := &types.Transaction{
 			TransactionID: t.TransactionID,
-			AccountID:    jsonData.Account.AccountID,
+			AccountID:    fmt.Sprintf("%d", jsonData.Account.AccountID),
 			Date:        date,
 			Amount:      t.Amount,
 			Category:    t.Category,
@@ -296,47 +295,26 @@ func insertTransaction(db *sql.DB, transaction *types.Transaction) error {
 	return tx.Commit()
 }
 
-func main() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file:", err)
-	}
-
-	// Get database connection details from environment variables
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("DB_URL environment variable is not set")
-	}
-
-	// Connect to PostgreSQL using the URL from .env
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-	defer db.Close()
-
-	// Test connection
-	if err := db.Ping(); err != nil {
-		log.Fatal("Failed to ping database:", err)
-	}
-	log.Println("Successfully connected to database")
-
+// SetupDatabase initializes the database and loads initial data
+func SetupDatabase(db *sql.DB) error {
 	// Create tables
 	if err := createTables(db); err != nil {
-		log.Fatal("Failed to create tables:", err)
+		return fmt.Errorf("failed to create tables: %w", err)
 	}
 	log.Println("Successfully created tables")
 
 	// Insert Jane's data
 	if err := InsertJaneData(db); err != nil {
-		log.Fatal("Failed to insert Jane's data:", err)
+		return fmt.Errorf("failed to insert Jane's data: %w", err)
 	}
 	log.Println("Successfully inserted Jane's data")
 
-	// Verify data
-	transactions, err := getTransactions(db, "1234567890")
+	// Get transactions to verify
+	transactions, err := getTransactions(db, "1234567891")
 	if err != nil {
-		log.Fatal("Failed to get transactions:", err)
+		return fmt.Errorf("failed to get transactions: %w", err)
 	}
 	log.Printf("Found %d transactions for Jane", len(transactions))
+
+	return nil
 }

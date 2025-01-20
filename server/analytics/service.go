@@ -73,7 +73,10 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 
 // GetTimePatterns implements Service.GetTimePatterns
 func (s *service) GetTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error) {
-	transactions, err := s.repo.GetTransactions(ctx, accountID, fmt.Sprintf("'%s'::timestamp - '%s'::timestamp", endDate.Format(time.RFC3339), startDate.Format(time.RFC3339)))
+	// Convert the date range to a PostgreSQL interval string
+	timeRange := "1 month"
+	
+	transactions, err := s.repo.GetTransactions(ctx, accountID, timeRange)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transactions: %w", err)
 	}

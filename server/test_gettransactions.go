@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"server/types"
 	"testing"
 )
 
@@ -11,7 +12,7 @@ func Test_getTransactions(t *testing.T) {
 		// Named input parameters for target function.
 		db        *sql.DB
 		accountID string
-		want      []Transaction
+		want      []types.Transaction
 		wantErr   bool
 	}{
 		// TODO: Add test cases.

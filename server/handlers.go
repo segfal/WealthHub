@@ -11,7 +11,7 @@ import (
 )
 
 func setupRoutes(router *mux.Router, db *sql.DB) {
-	repo := analytics.NewRepository(db)
+	repo := analytics.NewPostgresRepository(db)
 	analyticsService := analytics.NewService(repo)
 
 	router.HandleFunc("/api/analytics/{accountId}", func(w http.ResponseWriter, r *http.Request) {
