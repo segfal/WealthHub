@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Load .env file
-	if err := godotenv.Load(".env"); err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
 
@@ -47,7 +47,7 @@ func main() {
 	}
 	log.Println("Successfully inserted Jane's data")
 
-	// Verify data
+	// Get transactions to verify
 	transactions, err := crud.GetTransactions(db, "1234567891")
 	if err != nil {
 		log.Fatal("Failed to get transactions:", err)

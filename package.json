@@ -1,0 +1,14 @@
+{
+  "name": "financebros",
+  "version": "1.0.0",
+  "description": "Financial Analytics Platform",
+  "scripts": {
+    "client": "cd client && npm run dev",
+    "server": "cd server && ./run.sh",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd client && npm install && cd ../server && go mod download"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

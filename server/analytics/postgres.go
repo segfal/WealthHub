@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"server/types"
+	"strings"
 )
 
 type postgresRepo struct {
@@ -23,6 +25,8 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 		return nil, fmt.Errorf("account ID is required")
 	}
 
+	log.Printf("Fetching transactions for account %s with time range %s", accountID, timeRange)
+
 	query := `
 		SELECT transaction_id, account_id, date, amount, category, merchant, location
 		FROM transactions 
@@ -32,6 +36,7 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 	
 	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
 	if err != nil {
+		log.Printf("Error querying transactions: %v", err)
 		return nil, fmt.Errorf("failed to query transactions: %w", err)
 	}
 	defer rows.Close()
@@ -39,8 +44,9 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 	var transactions []types.Transaction
 	for rows.Next() {
 		var t types.Transaction
+		var prefixedTransactionID string
 		if err := rows.Scan(
-			&t.TransactionID,
+			&prefixedTransactionID,
 			&t.AccountID,
 			&t.Date,
 			&t.Amount,
@@ -48,15 +54,28 @@ func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, ti
 			&t.Merchant,
 			&t.Location,
 		); err != nil {
+			log.Printf("Error scanning transaction: %v", err)
 			return nil, fmt.Errorf("failed to scan transaction: %w", err)
 		}
+
+		// Extract the original transaction ID by removing the prefix
+		parts := strings.SplitN(prefixedTransactionID, "_", 2)
+		if len(parts) == 2 {
+			t.TransactionID = parts[1]
+			t.UserPrefix = parts[0]
+		} else {
+			t.TransactionID = prefixedTransactionID
+		}
+
 		transactions = append(transactions, t)
 	}
 
 	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating transactions: %v", err)
 		return nil, fmt.Errorf("error iterating transactions: %w", err)
 	}
 
+	log.Printf("Found %d transactions for account %s", len(transactions), accountID)
 	return transactions, nil
 }
 
@@ -64,6 +83,8 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 	if accountID == "" {
 		return nil, fmt.Errorf("account ID is required")
 	}
+
+	log.Printf("Fetching category totals for account %s with time range %s", accountID, timeRange)
 
 	query := `
 		SELECT category, COALESCE(SUM(ABS(amount)), 0) as total
@@ -75,6 +96,7 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 	
 	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
 	if err != nil {
+		log.Printf("Error querying category totals: %v", err)
 		return nil, fmt.Errorf("failed to query category totals: %w", err)
 	}
 	defer rows.Close()
@@ -84,14 +106,17 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 		var category string
 		var total float64
 		if err := rows.Scan(&category, &total); err != nil {
+			log.Printf("Error scanning category total: %v", err)
 			return nil, fmt.Errorf("failed to scan category total: %w", err)
 		}
 		categoryTotals[category] = total
 	}
 
 	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating category totals: %v", err)
 		return nil, fmt.Errorf("error iterating category totals: %w", err)
 	}
 
+	log.Printf("Found %d categories for account %s", len(categoryTotals), accountID)
 	return categoryTotals, nil
 } 

@@ -440,3 +440,97 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details 
+
+## Build Instructions
+
+### Prerequisites
+- Go 1.21 or higher
+- PostgreSQL 14 or higher
+- Git
+
+### Environment Setup
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/FinanceBros.git
+cd FinanceBros/server
+```
+
+2. Create a `.env` file in the server directory:
+```bash
+DB_URL=postgresql://postgres:password@localhost:5432/financebros
+DB_NAME=financebros
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
+PORT=8080
+```
+
+3. Install Go dependencies:
+```bash
+go mod download
+```
+
+### Database Setup
+1. Create a PostgreSQL database:
+```bash
+createdb financebros
+```
+
+2. Initialize the database with sample data:
+```bash
+go run cmd/setup_db/main.go
+```
+This will:
+- Create necessary tables
+- Insert sample data for Jane, John, Jill, and Jake Doe
+- Each user will have their transactions loaded from their respective JSON files
+
+### Running Tests
+To verify the database setup and transaction handling:
+```bash
+go run cmd/test_transactions/main.go
+```
+This will display sample transactions for each user, confirming:
+- Proper transaction ID prefixing
+- Correct data loading
+- Transaction retrieval functionality
+
+### Running the Server
+Start the server with:
+```bash
+go run main.go
+```
+The server will start on port 8080 (or the port specified in your .env file).
+
+### API Endpoints
+- `GET /api/transactions/:accountId` - Get all transactions for an account
+- `POST /api/transactions` - Create a new transaction
+- `GET /api/analytics/:accountId` - Get spending analytics for an account
+
+### Data Structure
+The database consists of two main tables:
+1. `users` - Stores user account information
+   - Primary key: `account_id`
+   - Contains: account details, balance information, bank details
+
+2. `transactions` - Stores transaction records
+   - Primary key: `transaction_id` (prefixed with user identifier)
+   - Foreign key: `account_id` references users(account_id)
+   - Contains: transaction details, amount, category, etc.
+
+### Transaction ID Format
+Transactions are stored with prefixed IDs to ensure uniqueness:
+- Format: `{userprefix}_{transactionid}`
+- Example: `jane_TXN00123`
+
+This allows:
+- Multiple users to have transactions with the same base ID
+- Easy filtering by user
+- Original transaction ID preservation
+
+### Development Notes
+- Transaction IDs are automatically prefixed with the user identifier during insertion
+- The system handles duplicate transaction IDs across users
+- Batch processing is implemented for efficient data loading
+- Error handling includes graceful handling of duplicates 
