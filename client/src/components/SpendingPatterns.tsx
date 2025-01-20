@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
 import { Pattern } from "./types";
 
@@ -12,69 +11,52 @@ const SpendingPatterns = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:8080/api/patterns/1234567890')
+    fetch('http://localhost:8080/api/analytics/patterns?accountId=1234567891')
       .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch patterns');
+        if (!res.ok) {
+          throw new Error(`Failed to fetch patterns: ${res.status} ${res.statusText}`);
+        }
         return res.json();
       })
       .then(data => {
-        setPatterns(data);
+        if (!data || !data.timePatterns) {
+          throw new Error('Invalid data format received from server');
+        }
+        // Transform the data to match the Pattern interface
+        const transformedData: Pattern = {
+          timeOfDay: {
+            morning: 0,
+            afternoon: 0,
+            evening: 0,
+            night: 0,
+            ...data.timePatterns.reduce((acc: any, curr: any) => {
+              const hour = parseInt(curr.hour);
+              if (hour >= 5 && hour < 12) acc.morning = (acc.morning || 0) + curr.totalSpent;
+              else if (hour >= 12 && hour < 17) acc.afternoon = (acc.afternoon || 0) + curr.totalSpent;
+              else if (hour >= 17 && hour < 22) acc.evening = (acc.evening || 0) + curr.totalSpent;
+              else acc.night = (acc.night || 0) + curr.totalSpent;
+              return acc;
+            }, {})
+          },
+          dayOfWeek: data.timePatterns.reduce((acc: any, curr: any) => {
+            acc[curr.dayOfWeek] = (acc[curr.dayOfWeek] || 0) + curr.totalSpent;
+            return acc;
+          }, {}),
+          recurringTransactions: data.recurringTransactions?.map((t: any) => ({
+            merchant: t.merchant || 'Unknown',
+            amount: t.amount || 0,
+            frequency: t.frequency || 'Monthly'
+          })) || []
+        };
+        setPatterns(transformedData);
         setError(null);
       })
       .catch(err => {
         console.error('Error fetching patterns:', err);
         setError(err.message);
-        // Set dummy data for development
-        setPatterns({
-          timeOfDay: {
-            morning: 250,
-            afternoon: 350,
-            evening: 450,
-            night: 150
-          },
-          dayOfWeek: {
-            Monday: 300,
-            Tuesday: 400,
-            Wednesday: 350,
-            Thursday: 500,
-            Friday: 600,
-            Saturday: 450,
-            Sunday: 300
-          },
-          recurringTransactions: [
-            {
-              merchant: "Netflix",
-              amount: 14.99,
-              frequency: "Monthly"
-            },
-            {
-              merchant: "Gym Membership",
-              amount: 49.99,
-              frequency: "Monthly"
-            },
-            {
-              merchant: "Spotify",
-              amount: 9.99,
-              frequency: "Monthly"
-            }
-          ]
-        });
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const timeData = patterns?.timeOfDay ? [
-    { name: 'Morning', value: patterns.timeOfDay.morning },
-    { name: 'Afternoon', value: patterns.timeOfDay.afternoon },
-    { name: 'Evening', value: patterns.timeOfDay.evening },
-    { name: 'Night', value: patterns.timeOfDay.night },
-  ] : [];
-
-  const weekData = patterns?.dayOfWeek ? 
-    Object.entries(patterns.dayOfWeek).map(([day, value]) => ({
-      name: day,
-      value: value
-    })) : [];
 
   if (loading) {
     return (
@@ -96,7 +78,7 @@ const SpendingPatterns = () => {
   }
 
   return (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+    <div className="grid gap-4">
       {/* Time of Day Analysis */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -108,16 +90,15 @@ const SpendingPatterns = () => {
             <Clock className="w-5 h-5 mr-2" />
             <h3 className="text-lg font-medium">Spending by Time of Day</h3>
           </div>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={timeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="space-y-4">
+            {patterns?.timeOfDay && Object.entries(patterns.timeOfDay)
+              .sort(([, a], [, b]) => b - a)
+              .map(([time, amount]) => (
+                <div key={time} className="flex justify-between items-center">
+                  <span className="capitalize">{time}</span>
+                  <span className="font-medium">${amount.toFixed(2)}</span>
+                </div>
+              ))}
           </div>
         </Card>
       </motion.div>
@@ -133,23 +114,21 @@ const SpendingPatterns = () => {
             <TrendingUp className="w-5 h-5 mr-2" />
             <h3 className="text-lg font-medium">Spending by Day of Week</h3>
           </div>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weekData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="space-y-4">
+            {patterns?.dayOfWeek && Object.entries(patterns.dayOfWeek)
+              .sort(([, a], [, b]) => b - a)
+              .map(([day, amount]) => (
+                <div key={day} className="flex justify-between items-center">
+                  <span>{day}</span>
+                  <span className="font-medium">${amount.toFixed(2)}</span>
+                </div>
+              ))}
           </div>
         </Card>
       </motion.div>
 
       {/* Recurring Transactions */}
       <motion.div
-        className="lg:col-span-2"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.2 }}
