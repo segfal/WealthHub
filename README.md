@@ -28,20 +28,34 @@ git clone https://github.com/yourusername/FinanceBros.git
 cd FinanceBros
 ```
 
-2. Set up the database:
+2. Install Dependencies:
+
+Feeling lazy? We've got you covered! Just run our setup script:
+```bash
+chmod +x setup.sh  # Make it executable first
+./setup.sh         # Let the magic happen
+```
+Or if you're feeling extra lazy, do it all in one go:
+```bash
+bash setup.sh
+```
+
+The script will check if you have all the required tools (npm, node, and Go) and guide you through the installation process.
+
+3. Set up the database:
 ```bash
 # Create a PostgreSQL database named 'financebros'
 createdb financebros
 ```
 
-3. Configure environment variables:
+4. Configure environment variables:
 ```bash
 # In server/.env
 DB_URL=postgresql://postgres:password@localhost:5432/financebros
 PORT=8080
 ```
 
-4. Install dependencies:
+5. Install dependencies:
 ```bash
 # Install frontend dependencies
 cd client
@@ -52,7 +66,7 @@ cd ../server
 go mod download
 ```
 
-5. Start the development servers:
+6. Start the development servers:
 ```bash
 # From the root directory
 npm run dev
