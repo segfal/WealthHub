@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { AlertTriangle, Loader2 } from "lucide-react";
-import { Prediction } from "./types";
+import { AlertTriangle, Calendar, Loader2 } from "lucide-react";
+
+interface PredictedSpend {
+  category: string;
+  likelihood: number;
+  predictedDate: string;
+  warning: string;
+}
 
 const SpendingPredictions = () => {
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [predictions, setPredictions] = useState<PredictedSpend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,21 +24,11 @@ const SpendingPredictions = () => {
         }
         return res.json();
       })
-      .then(data => {
-        if (!data || !data.categoryPredictions) {
+      .then((data: PredictedSpend[]) => {
+        if (!Array.isArray(data)) {
           throw new Error('Invalid data format received from server');
         }
-        // Transform the data to match the Prediction interface
-        const transformedPredictions: Prediction[] = data.categoryPredictions.map((p: any) => ({
-          category: p.category,
-          predictedAmount: p.predictedAmount || 0,
-          confidence: (p.confidence || 0) * 100, // Convert to percentage
-          trend: p.trend || [{amount: 0, date: 'Previous'}, {amount: 0, date: 'Predicted'}],
-          warning: p.warning || (p.predictedAmount > p.trend?.[0]?.amount ? 
-            `${((p.predictedAmount - p.trend[0].amount) / p.trend[0].amount * 100).toFixed(1)}% increase expected` : 
-            undefined)
-        }));
-        setPredictions(transformedPredictions);
+        setPredictions(data);
         setError(null);
       })
       .catch(err => {
@@ -74,9 +70,10 @@ const SpendingPredictions = () => {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-medium">{prediction.category}</h3>
-                <p className="text-sm text-gray-500">
-                  Predicted spending: ${prediction.predictedAmount.toFixed(2)}
-                </p>
+                <div className="flex items-center text-sm text-gray-500 mt-1">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  <span>Expected around {new Date(prediction.predictedDate).toLocaleDateString()}</span>
+                </div>
               </div>
               {prediction.warning && (
                 <div className="flex items-center text-yellow-500">
@@ -87,25 +84,14 @@ const SpendingPredictions = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Last Month</p>
-                  <p className="font-medium">${prediction.trend[0]?.amount.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Next Month (Predicted)</p>
-                  <p className="font-medium">${prediction.trend[prediction.trend.length - 1]?.amount.toFixed(2)}</p>
-                </div>
-              </div>
-
               <div>
                 <div className="text-sm text-gray-500 mb-1">
-                  Confidence: {prediction.confidence}%
+                  Likelihood: {(prediction.likelihood * 100).toFixed(0)}%
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${prediction.confidence}%` }}
+                    style={{ width: `${prediction.likelihood * 100}%` }}
                   />
                 </div>
               </div>
