@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { Clock, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
-import { Pattern } from "./types";
+import { Clock, TrendingUp, Loader2 } from "lucide-react";
+
+// Categories that are considered bills/rent and should be excluded
+const EXCLUDED_CATEGORIES = new Set([
+  'Rent',
+  'Utilities',
+  'Insurance',
+  'Phone Bill',
+  'Internet',
+  'Mortgage',
+  'Water Bill',
+  'Electric Bill',
+  'Gas Bill'
+]);
+
+interface TimePattern {
+  timeOfDay: string;
+  dayOfWeek: string;
+  frequency: number;
+  averageSpend: number;
+  category: string;
+}
 
 const SpendingPatterns = () => {
-  const [patterns, setPatterns] = useState<Pattern | null>(null);
+  const [patterns, setPatterns] = useState<TimePattern[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,37 +38,13 @@ const SpendingPatterns = () => {
         }
         return res.json();
       })
-      .then(data => {
-        if (!data || !data.timePatterns) {
+      .then((data: TimePattern[]) => {
+        if (!Array.isArray(data)) {
           throw new Error('Invalid data format received from server');
         }
-        // Transform the data to match the Pattern interface
-        const transformedData: Pattern = {
-          timeOfDay: {
-            morning: 0,
-            afternoon: 0,
-            evening: 0,
-            night: 0,
-            ...data.timePatterns.reduce((acc: any, curr: any) => {
-              const hour = parseInt(curr.hour);
-              if (hour >= 5 && hour < 12) acc.morning = (acc.morning || 0) + curr.totalSpent;
-              else if (hour >= 12 && hour < 17) acc.afternoon = (acc.afternoon || 0) + curr.totalSpent;
-              else if (hour >= 17 && hour < 22) acc.evening = (acc.evening || 0) + curr.totalSpent;
-              else acc.night = (acc.night || 0) + curr.totalSpent;
-              return acc;
-            }, {})
-          },
-          dayOfWeek: data.timePatterns.reduce((acc: any, curr: any) => {
-            acc[curr.dayOfWeek] = (acc[curr.dayOfWeek] || 0) + curr.totalSpent;
-            return acc;
-          }, {}),
-          recurringTransactions: data.recurringTransactions?.map((t: any) => ({
-            merchant: t.merchant || 'Unknown',
-            amount: t.amount || 0,
-            frequency: t.frequency || 'Monthly'
-          })) || []
-        };
-        setPatterns(transformedData);
+        // Filter out bills and rent from patterns
+        const filteredPatterns = data.filter(pattern => !EXCLUDED_CATEGORIES.has(pattern.category));
+        setPatterns(filteredPatterns);
         setError(null);
       })
       .catch(err => {
@@ -70,16 +66,31 @@ const SpendingPatterns = () => {
     return (
       <Card className="p-6">
         <div className="text-center text-destructive">
-          <AlertCircle className="w-8 h-8 mx-auto mb-2" />
           <p>{error}</p>
         </div>
       </Card>
     );
   }
 
+  // Group patterns by day of week
+  const dayPatterns = patterns.reduce<{ [key: string]: TimePattern[] }>((acc, pattern) => {
+    if (!acc[pattern.dayOfWeek]) {
+      acc[pattern.dayOfWeek] = [];
+    }
+    acc[pattern.dayOfWeek].push(pattern);
+    return acc;
+  }, {});
+
+  // Calculate daily totals (excluding bills/rent)
+  const dailyTotals = Object.entries(dayPatterns).map(([day, patterns]) => ({
+    day,
+    totalSpend: patterns.reduce((sum, p) => sum + p.averageSpend * p.frequency, 0),
+    totalTransactions: patterns.reduce((sum, p) => sum + p.frequency, 0)
+  })).sort((a, b) => b.totalSpend - a.totalSpend);
+
   return (
     <div className="grid gap-4">
-      {/* Time of Day Analysis */}
+      {/* Day of Week Analysis */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -87,23 +98,24 @@ const SpendingPatterns = () => {
       >
         <Card className="p-6">
           <div className="flex items-center mb-4">
-            <Clock className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Spending by Time of Day</h3>
+            <TrendingUp className="w-5 h-5 mr-2" />
+            <h3 className="text-lg font-medium">Discretionary Spending by Day</h3>
           </div>
           <div className="space-y-4">
-            {patterns?.timeOfDay && Object.entries(patterns.timeOfDay)
-              .sort(([, a], [, b]) => b - a)
-              .map(([time, amount]) => (
-                <div key={time} className="flex justify-between items-center">
-                  <span className="capitalize">{time}</span>
-                  <span className="font-medium">${amount.toFixed(2)}</span>
+            {dailyTotals.map(({ day, totalSpend, totalTransactions }) => (
+              <div key={day} className="flex justify-between items-center">
+                <div>
+                  <span className="font-medium">{day}</span>
+                  <span className="text-sm text-gray-500 ml-2">({totalTransactions} transactions)</span>
                 </div>
-              ))}
+                <span className="font-medium">${totalSpend.toFixed(2)}</span>
+              </div>
+            ))}
           </div>
         </Card>
       </motion.div>
 
-      {/* Day of Week Analysis */}
+      {/* Time of Day Analysis */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -111,43 +123,22 @@ const SpendingPatterns = () => {
       >
         <Card className="p-6">
           <div className="flex items-center mb-4">
-            <TrendingUp className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Spending by Day of Week</h3>
+            <Clock className="w-5 h-5 mr-2" />
+            <h3 className="text-lg font-medium">Most Active Shopping Times</h3>
           </div>
           <div className="space-y-4">
-            {patterns?.dayOfWeek && Object.entries(patterns.dayOfWeek)
-              .sort(([, a], [, b]) => b - a)
-              .map(([day, amount]) => (
-                <div key={day} className="flex justify-between items-center">
-                  <span>{day}</span>
-                  <span className="font-medium">${amount.toFixed(2)}</span>
+            {patterns
+              .sort((a, b) => b.frequency - a.frequency)
+              .slice(0, 5)
+              .map((pattern) => (
+                <div key={`${pattern.dayOfWeek}-${pattern.timeOfDay}`} className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">{pattern.dayOfWeek}s at {pattern.timeOfDay}</span>
+                    <span className="text-sm text-gray-500 ml-2">({pattern.frequency} times)</span>
+                  </div>
+                  <span className="font-medium">${pattern.averageSpend.toFixed(2)} avg</span>
                 </div>
               ))}
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Recurring Transactions */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
-      >
-        <Card className="p-6">
-          <div className="flex items-center mb-4">
-            <AlertCircle className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Recurring Transactions</h3>
-          </div>
-          <div className="space-y-4">
-            {patterns?.recurringTransactions?.map((transaction, index) => (
-              <div key={index} className="flex justify-between items-center p-4 bg-secondary rounded-lg">
-                <div>
-                  <p className="font-medium">{transaction.merchant}</p>
-                  <p className="text-sm text-muted-foreground">{transaction.frequency}</p>
-                </div>
-                <p className="font-medium">${transaction.amount.toFixed(2)}</p>
-              </div>
-            ))}
           </div>
         </Card>
       </motion.div>

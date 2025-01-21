@@ -5,6 +5,8 @@ import SpendingOverview from "@/components/SpendingOverview";
 import SpendingCategories from "@/components/SpendingCategories";
 import SpendingPredictions from "@/components/SpendingPredictions";
 import SpendingPatterns from "@/components/SpendingPatterns";
+import SpendingInsights from "@/components/SpendingInsights";
+import BillsOverview from "@/components/BillsOverview";
 import { DollarSign, Wallet, BellDot } from "lucide-react";
 import { dummyTransactions } from "./data";
 
@@ -118,6 +120,18 @@ const Homepage = () => {
               Categories
             </TabsTrigger>
             <TabsTrigger 
+              value="insights" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Insights
+            </TabsTrigger>
+            <TabsTrigger 
+              value="bills" 
+              className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
+            >
+              Bills
+            </TabsTrigger>
+            <TabsTrigger 
               value="predictions" 
               className="flex-1 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-gray-400"
             >
@@ -143,6 +157,14 @@ const Homepage = () => {
 
             <TabsContent value="categories" className="p-6">
               <SpendingCategories />
+            </TabsContent>
+
+            <TabsContent value="insights" className="p-6">
+              <SpendingInsights />
+            </TabsContent>
+
+            <TabsContent value="bills" className="p-6">
+              <BillsOverview />
             </TabsContent>
 
             <TabsContent value="predictions" className="p-6">
