@@ -5,7 +5,8 @@ import { AlertTriangle, Calendar, Loader2, TrendingUp } from "lucide-react";
 
 // Categories that are considered bills/rent and should be excluded
 const EXCLUDED_CATEGORIES = new Set([
-  'Rent',
+  'Rent', 
+  'Income',
   'Utilities',
   'Insurance',
   'Phone Bill',

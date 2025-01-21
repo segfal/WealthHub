@@ -4,7 +4,29 @@ import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
 import { CategoryData } from "./types";
 
+const EXCLUDED_CATEGORIES = new Set([
+  'Rent', 
+  'Income',
+  'Utilities',
+  'Insurance',
+  'Phone Bill',
+  'Internet',
+  'Mortgage',
+  'Water Bill',
+  'Electric Bill',
+  'Gas Bill'
+]);
+
+interface PredictedSpend {
+  category: string;
+  likelihood: number;
+  predictedDate: string;
+  warning: string;
+  amount: number;
+}
+
 const SpendingCategories = () => {
+  const [predictions, setPredictions] = useState<PredictedSpend[]>([]);
   const [categories, setCategories] = useState<CategoryData>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +40,19 @@ const SpendingCategories = () => {
         }
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
+        console.log(data);
         if (!data || !data.topCategories) {
           throw new Error('Invalid data format received from server');
         }
-        const categoryData: CategoryData = {};
-        data.topCategories.forEach((cat: any) => {
-          categoryData[cat.category || 'Other'] = parseFloat(cat.totalSpent) || 0;
+        const categoryData: CategoryData = {}; 
+        console.log(data.topCategories);
+
+        data.topCategories.forEach((cat: any) => { 
+          if(cat.category != "Income"){ 
+            categoryData[cat.category || 'Other'] = parseFloat(cat.totalSpent) || 0; 
+          }
+
         });
         setCategories(categoryData);
         setError(null);
