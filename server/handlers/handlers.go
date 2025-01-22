@@ -1,19 +1,41 @@
-package main
+package handlers
 
 import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"server/analytics"
+	"server/crud"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
-func setupRoutes(router *mux.Router, db *sql.DB) {
+// SetupRoutes configures all the routes for the API
+func SetupRoutes(router *mux.Router, db *sql.DB) {
 	repo := analytics.NewPostgresRepository(db)
 	analyticsService := analytics.NewService(repo)
 
+	// User route
+	router.HandleFunc("/api/user/{accountId}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		accountID := vars["accountId"]
+
+		user, err := crud.GetUser(db, accountID)
+		if err != nil {
+			if err.Error() == "user not found" {
+				http.Error(w, "User not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(user)
+	}).Methods("GET")
+
+	// Analytics route
 	router.HandleFunc("/api/analytics/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
@@ -32,6 +54,7 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 		json.NewEncoder(w).Encode(analytics)
 	}).Methods("GET")
 
+	// Categories route
 	router.HandleFunc("/api/categories/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
@@ -46,6 +69,7 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 		json.NewEncoder(w).Encode(categoryTotals)
 	}).Methods("GET")
 
+	// Predictions route
 	router.HandleFunc("/api/predictions/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
@@ -60,6 +84,7 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 		json.NewEncoder(w).Encode(predictions)
 	}).Methods("GET")
 
+	// Patterns route
 	router.HandleFunc("/api/patterns/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
@@ -73,4 +98,12 @@ func setupRoutes(router *mux.Router, db *sql.DB) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(patterns)
 	}).Methods("GET")
-} 
+}
+
+/*
+	to call the api from the client, we need to use the following url:
+	http://localhost:8080/api/user/1234567891
+	if you want a prediction, you need to use the following url:
+	http://localhost:8080/api/predictions/1234567891
+
+*/

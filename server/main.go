@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"os"
 	"server/analytics"
+	"server/handlers"
 	"time"
 
-	"github.com/gorilla/handlers"
+	gorilla_handlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -86,17 +87,18 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 
-	// Register routes
+	// Register all routes
+	handlers.SetupRoutes(router, db)
 	analyticsHandler.RegisterRoutes(router)
 
 	// Set up CORS
-	corsMiddleware := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-		handlers.ExposedHeaders([]string{"Content-Length"}),
-		handlers.AllowCredentials(),
-		handlers.MaxAge(3600),
+	corsMiddleware := gorilla_handlers.CORS(
+		gorilla_handlers.AllowedOrigins([]string{"*"}),
+		gorilla_handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		gorilla_handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		gorilla_handlers.ExposedHeaders([]string{"Content-Length"}),
+		gorilla_handlers.AllowCredentials(),
+		gorilla_handlers.MaxAge(3600),
 	)
 
 	// Add recovery middleware to handle panics
