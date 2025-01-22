@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from Transactions import *
 from User import User
 from transaction_generator import transaction_generator
-
+from Database import store_data
 # create a user named john his balance currently is 2,000 and his account id is 1234567890
 john = User(
     user_id=1234567890,
@@ -60,3 +60,8 @@ os.system("cp *.json server/src/data")
 # store the current data into a json directory
 os.system("mkdir json_data")
 os.system("mv *.json json_data")
+
+store_data("json_data/jill.json")
+store_data("json_data/john.json")
+# store_data("json_data/jane.json")
+store_data("json_data/jake.json")
