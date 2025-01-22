@@ -53,6 +53,10 @@ jake.save_to_json("jake.json")
 jill.save_to_json("jill.json")
 
 
+# send it to server and client using cp
+os.system("cp *.json client/src/data")
+os.system("cp *.json server/src/data")
 
-os.system("mv *.json client/src/data")
-
+# store the current data into a json directory
+os.system("mkdir json_data")
+os.system("mv *.json json_data")
