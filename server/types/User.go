@@ -13,11 +13,11 @@ type UserBankDetails struct {
 }
 
 type User struct {
-	AccountID     string          `json:"account_id"`
-	AccountName   string          `json:"account_name"`
-	AccountType   string          `json:"account_type"`
-	AccountNumber string          `json:"account_number"`
-	Balance       UserBalance     `json:"balance"`
-	OwnerName     string          `json:"owner_name"`
+	AccountID     string         `json:"account_id"`
+	AccountName   string         `json:"account_name"`
+	AccountType   string         `json:"account_type"`
+	AccountNumber string         `json:"account_number"`
+	Balance       UserBalance    `json:"balance"`
+	OwnerName     string         `json:"owner_name"`
 	BankDetails   UserBankDetails `json:"bank_details"`
 } 

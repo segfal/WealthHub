@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { AlertTriangle, TrendingDown, TrendingUp, ShoppingBag, Coffee, Utensils, Plane, Book, Monitor, Gift } from "lucide-react";
-
+import { getSpendingInsights } from "../lib/api";
 // Categories that are considered bills/rent and should be excluded
 const EXCLUDED_CATEGORIES = new Set([
   'Rent',
@@ -105,23 +105,60 @@ interface SpendingInsight {
   trend: 'increasing' | 'decreasing' | 'stable';
 }
 
+interface InsightData {
+  type: string;
+  title: string;
+  description: string;
+  data: Array<{
+    category: string;
+    totalSpent: string;
+    percentage?: string;
+  }>;
+}
+
+interface InsightResponse {
+  insights: InsightData[];
+  totalSpent: number;
+  monthlyAverage: number;
+}
+
 const SpendingInsights = () => {
   const [insights, setInsights] = useState<SpendingInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const accountId = import.meta.env.VITE_ACCOUNT_ID;
+    if (!accountId) {
+      setError("No account ID provided");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch('http://localhost:8080/api/analytics/spending?accountId=1234567891&timeRange=1%20month')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch insights: ${res.status} ${res.statusText}`);
+    getSpendingInsights(accountId)
+      .then((data: InsightResponse) => {
+        if (!data || !data.insights) {
+          throw new Error('Invalid data format received from server');
         }
-        return res.json();
-      })
-      .then(data => {
-        // Filter out bills and process spending data
-        const processedInsights = processTransactions(data.transactions || []);
+        
+        // Process insights data
+        const topCategoriesInsight = data.insights.find((i: InsightData) => i.type === 'top_categories');
+        if (!topCategoriesInsight || !topCategoriesInsight.data) {
+          throw new Error('No spending categories data found');
+        }
+
+        // Convert the data into our expected format
+        const processedInsights: SpendingInsight[] = topCategoriesInsight.data
+          .filter(cat => !EXCLUDED_CATEGORIES.has(cat.category))
+          .map(cat => ({
+            category: cat.category,
+            totalSpent: parseFloat(cat.totalSpent),
+            frequency: 1, // Default value since we don't have frequency data
+            merchants: [], // We don't have merchant data in this version
+            trend: 'stable' as 'increasing' | 'decreasing' | 'stable'
+          }));
+
         setInsights(processedInsights);
         setError(null);
       })
@@ -197,7 +234,7 @@ const SpendingInsights = () => {
       case 'electronics': return <Monitor className="w-5 h-5" />;
       case 'entertainment': return <span className="text-xl">🎭</span>;
       case 'groceries': return <span className="text-xl">🛒</span>;
-      case 'health': return <span className="text-xl">��</span>;
+      case 'health': return <span className="text-xl">🏥</span>;
       case 'fitness': return <span className="text-xl">🏋️</span>;
       case 'pets': return <span className="text-xl">🐾</span>;
       case 'beauty': return <span className="text-xl">💄</span>;

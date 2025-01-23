@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { AlertTriangle, Calendar, Loader2, TrendingUp } from "lucide-react";
-
+import { getSpendingPredictions } from "../lib/api";
 // Categories that are considered bills/rent and should be excluded
 const EXCLUDED_CATEGORIES = new Set([
   'Rent', 
@@ -31,15 +31,16 @@ const SpendingPredictions = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const accountId = import.meta.env.VITE_ACCOUNT_ID;
+    if (!accountId) {
+      setError("No account ID provided");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch('http://localhost:8080/api/analytics/predictions?accountId=1234567891')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch predictions: ${res.status} ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((data: PredictedSpend[]) => {
+    getSpendingPredictions(accountId)
+      .then(data => {
         if (!Array.isArray(data)) {
           throw new Error('Invalid data format received from server');
         }

@@ -2,66 +2,80 @@ import os,sys,json,random
 from datetime import datetime, timedelta
 from Transactions import *
 from User import User
-from transaction_generator import transaction_generator
-from Database import store_data
-# create a user named john his balance currently is 2,000 and his account id is 1234567890
-john = User(
-    user_id=1234567890,
-    account_id=1234567890,
-    name="John Doe",
-    email="john.doe@example.com",
-    phone_number="1234567890",
+from transaction_generator import (
+    transaction_generator,
+    poor_spending_habits_generator,
+    high_payment_habits_generator,
+    student_spending_habits_generator
 )
-jane = User(
-    user_id=1234567891,
-    account_id=1234567891,
-    name="Jane Doe",
-    email="jane.doe@example.com",
-    phone_number="1234567891",
-)
+from Database import store_data, UserInput
+from data_utils.util import database_credentials
 
-jake = User(
-    user_id=1234567892,
-    account_id=1234567892,
-    name="Jake Doe",
-    email="jake.doe@example.com",
-    phone_number="1234567892",
+def create_user_json(user, filename):
+    """Create initial JSON file for a user"""
+    user.save_to_json(filename)
+    # Store user in database
+    store_data(filename)
+
+# Create users
+bob = User(
+    user_id=1234567894,
+    account_id=1234567894,
+    name="Bob Doe",
+    email="bob.doe@example.com",
+    phone_number="1234567894",
 )
 
-jill = User(
-    user_id=1234567893,
-    account_id=1234567893,
-    name="Jill Doe",
-    email="jill.doe@example.com",
-    phone_number="1234567893",
+becky = User(
+    user_id=1234567895,
+    account_id=1234567895,
+    name="Becky Doe",
+    email="becky.doe@example.com",
+    phone_number="1234567895",
 )
 
-john.set_initial_balance(2000.00)
-jane.set_initial_balance(1000.00)
-jake.set_initial_balance(1500.00)
-jill.set_initial_balance(1000.00)
+# Create Abdul's profile
+abdul = User(
+    user_id=1234567900,
+    account_id=1234567900,
+    name="Abdul Mohammed",
+    email="abdul.mohammed@example.com",
+    phone_number="1234567900"
+)
+
+# Set initial balances
+print("Setting initial balances...")
+bob.set_initial_balance(10000.00)
+becky.set_initial_balance(15000.00)
+abdul.set_initial_balance(500.00)
+
+# Create initial JSON files and store users in database
+print("Creating initial user data...")
+os.system("mkdir -p json_data")
+create_user_json(bob, "json_data/bob.json")
+create_user_json(becky, "json_data/becky.json")
+create_user_json(abdul, "json_data/abdul.json")
+
+# Generate transactions
+print("Generating transactions...")
+poor_spending_habits_generator(bob)
+high_payment_habits_generator(becky)
+student_spending_habits_generator(abdul)
+
+print("Saving final transaction data...")
+bob.save_to_json("json_data/bob.json")
+becky.save_to_json("json_data/becky.json")
+abdul.save_to_json("json_data/abdul.json")
+
+print("Copying data to client and server...")
+os.system("cp json_data/*.json client/src/data/")
+os.system("cp json_data/*.json server/src/data/")
+
+print("Updating database with final transaction data...")
+store_data("json_data/bob.json")
+store_data("json_data/becky.json")
+store_data("json_data/abdul.json")
+
+print("Done!")
 
 
-transaction_generator(john)
-transaction_generator(jane)
-transaction_generator(jake)
-transaction_generator(jill)
-
-john.save_to_json("john.json")
-jane.save_to_json("jane.json")
-jake.save_to_json("jake.json")
-jill.save_to_json("jill.json")
-
-
-# send it to server and client using cp
-os.system("cp *.json client/src/data")
-os.system("cp *.json server/src/data")
-
-# store the current data into a json directory
-os.system("mkdir json_data")
-os.system("mv *.json json_data")
-
-store_data("json_data/jill.json")
-store_data("json_data/john.json")
-# store_data("json_data/jane.json")
-store_data("json_data/jake.json")

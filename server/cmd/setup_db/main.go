@@ -12,17 +12,17 @@ import (
 
 func main() {
 	// Load .env file
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
 
-	// Get database connection details from environment variables
+	// Get database URL from environment
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		log.Fatal("DB_URL environment variable is not set")
 	}
 
-	// Connect to PostgreSQL using the URL from .env
+	// Connect to the database using the URL from .env
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
@@ -41,16 +41,10 @@ func main() {
 	}
 	log.Println("Successfully created tables")
 
-	// Insert Jane's data
-	if err := crud.InsertJaneData(db); err != nil {
-		log.Fatal("Failed to insert Jane's data:", err)
-	}
-	log.Println("Successfully inserted Jane's data")
-
-	// Get transactions to verify
-	transactions, err := crud.GetTransactions(db, "1234567891")
+	// Get all transactions to verify setup
+	transactions, err := crud.GetTransactions(db, "test123")
 	if err != nil {
 		log.Fatal("Failed to get transactions:", err)
 	}
-	log.Printf("Found %d transactions for Jane", len(transactions))
+	log.Printf("Found %d transactions", len(transactions))
 } 

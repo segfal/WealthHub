@@ -1,25 +1,9 @@
-import os,json
-from dotenv import load_dotenv
 import psycopg2 as pg
-
-load_dotenv()
-
-
-
-DB_URL = os.getenv("DB_URL")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
+import json
+from data_utils.util import database_credentials, connect_to_db, close_db_connection, get_last_transaction_id, split_transaction_key, get_next_transaction_id
+from datetime import datetime
 
 
-def connect_to_db():
-    conn = pg.connect(DB_URL)
-    return conn
-
-def close_db_connection(conn):
-    conn.close()
 
 '''
 schema for users table:
@@ -87,6 +71,41 @@ JillDoe.json
 
 '''
 
+def bulk_insert_transactions(transactions):
+    """Bulk insert transactions into the database"""
+    if not transactions:
+        return
+        
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Prepare the values for bulk insert
+        values = [(
+            t['transaction_id'],
+            t['account_id'],
+            t['date'],
+            t['amount'],
+            t['category'],
+            t['merchant'],
+            t['location']
+        ) for t in transactions]
+        
+        # Execute bulk insert
+        cursor.executemany(
+            "INSERT INTO transactions (transaction_id, account_id, date, amount, category, merchant, location) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            values
+        )
+        conn.commit()
+        print(f"Bulk inserted {len(transactions)} transactions")
+    except Exception as e:
+        print(f"Error in bulk insert: {str(e)}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        close_db_connection(conn)
+
 class UserInput:
     def __init__(self, json_file):
         self.json_file = json_file
@@ -94,11 +113,31 @@ class UserInput:
         self.insert_user()
         self.insert_transactions()
 
+    def get_last_transaction_key(self):
+        conn = connect_to_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT transaction_id FROM transactions ORDER BY date DESC LIMIT 1")
+        result = cursor.fetchone()
+        close_db_connection(conn)
+        return result[0] if result else None
+
     def load_data(self):
         with open(self.json_file, 'r') as file:
             return json.load(file)
-        
+    def check_user_exists(self):
+        ## if user already exists, skip
+        conn = connect_to_db()
+        cursor = conn.cursor()
+        # account_id is an integer
+        cursor.execute("SELECT * FROM users WHERE account_id = %s", (str(self.data['account']['account_id']),))
+        result = cursor.fetchone()
+        close_db_connection(conn)
+        return result
     def insert_user(self):
+        ## if user already exists, skip
+        if self.check_user_exists():
+            print(f"User {self.data['account']['account_id']} already exists, skipping")
+            return
         conn = connect_to_db()
         cursor = conn.cursor()
         cursor.execute("INSERT INTO users (account_id, account_name, account_type, account_number, balance_current, balance_available, balance_currency, owner_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (self.data['account']['account_id'], self.data['account']['account_name'], self.data['account']['account_type'], self.data['account']['account_number'], self.data['account']['balance']['current'], self.data['account']['balance']['available'], self.data['account']['balance']['currency'], self.data['account']['owner_name']))
@@ -106,16 +145,32 @@ class UserInput:
         cursor.close()
         close_db_connection(conn)
     
-
+    def split_key(self, key):
+        split_key = key.split("TXN")
+        last_transaction_key_number = int(split_key[1])
+        return last_transaction_key_number
+    
+    
     def insert_transactions(self):
-        # buik insert all transactions in a batch using upsert
+        """Insert transactions in weekly batches"""
+        if not self.data['account']['transactions']:
+            return
+
+        # Group transactions by week
+        transactions_by_week = {}
         for transaction in self.data['account']['transactions']:
-            conn = connect_to_db()
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO transactions (account_id, transaction_type, transaction_amount, transaction_currency, transaction_date) VALUES (%s, %s, %s, %s, %s)", (self.data['account']['account_id'], transaction['type'], transaction['amount'], transaction['currency'], transaction['date']))
-            conn.commit()
-        cursor.close()
-        close_db_connection(conn)
+            # Get the week number for this transaction
+            date = datetime.strptime(transaction['date'], '%Y-%m-%d')
+            week_key = date.strftime('%Y-%W')  # Year and week number
+            
+            if week_key not in transactions_by_week:
+                transactions_by_week[week_key] = []
+            transactions_by_week[week_key].append(transaction)
+
+        # Insert each week's transactions as a batch
+        for week, transactions in transactions_by_week.items():
+            print(f"Inserting batch of {len(transactions)} transactions for week {week}")
+            bulk_insert_transactions(transactions)
         
 
     
@@ -123,4 +178,7 @@ def store_data(json_file):
     user_input = UserInput(json_file)
     user_input.insert_user()
     user_input.insert_transactions()
+
+    
+
 

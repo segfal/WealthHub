@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type UserInfo struct {
+	UserID string
+	AccountID string
+}
+
 // Service defines the interface for analytics operations
 type Service interface {
 	// AnalyzeSpending analyzes spending patterns for a given account and time range
@@ -25,4 +30,7 @@ type Repository interface {
 	
 	// GetCategoryTotals retrieves total spending by category
 	GetCategoryTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error)
+	
+	// GetAccount retrieves account information
+	GetAccount(ctx context.Context, accountID string) (*types.Account, error)
 } 

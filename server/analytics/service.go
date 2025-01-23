@@ -20,6 +20,12 @@ func NewService(repo Repository) Service {
 
 // AnalyzeSpending implements Service.AnalyzeSpending
 func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRange string) (*types.SpendingAnalytics, error) {
+	// First, verify the account exists
+	account, err := s.repo.GetAccount(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
 	categoryTotals, err := s.repo.GetCategoryTotals(ctx, accountID, timeRange)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category totals: %w", err)
@@ -63,7 +69,8 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 	}
 
 	return &types.SpendingAnalytics{
-		TopCategories:     topCategories,
+		Account:          account,
+		TopCategories:    topCategories,
 		SpendingPatterns: patterns,
 		PredictedSpending: predictions,
 		TotalSpent:       totalSpent,
@@ -73,6 +80,11 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 
 // GetTimePatterns implements Service.GetTimePatterns
 func (s *service) GetTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
 	// Convert the date range to a PostgreSQL interval string
 	timeRange := "1 month"
 	
@@ -99,7 +111,7 @@ func (s *service) GetTimePatterns(ctx context.Context, accountID string, startDa
 		}
 
 		stats := patterns[dayOfWeek][hourOfDay]
-		stats.totalAmount += math.Abs(t.Amount) // Use absolute value for spending analysis
+		stats.totalAmount += math.Abs(t.Amount)
 		stats.count++
 		patterns[dayOfWeek][hourOfDay] = stats
 	}
@@ -130,6 +142,11 @@ func (s *service) GetTimePatterns(ctx context.Context, accountID string, startDa
 
 // PredictSpending implements Service.PredictSpending
 func (s *service) PredictSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
 	// Get last 6 months of transactions for better prediction
 	transactions, err := s.repo.GetTransactions(ctx, accountID, "6 months")
 	if err != nil {

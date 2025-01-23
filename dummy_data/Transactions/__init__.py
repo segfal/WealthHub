@@ -8,7 +8,8 @@ from Transactions.TransportationTransaction import TransportationTransaction
 from Transactions.UtilityTransaction import UtilityTransaction
 from Transactions.RentalTransaction import RentalTransaction
 from Transactions.BillPaymentTransaction import BillPaymentTransaction
-from Transactions.UtilityTransaction import UtilityTransaction
 from Transactions.NetflixTransaction import NetflixTransaction
 from Transactions.GroceryTransaction import GroceryTransaction
 from Transactions.ChipotleTransaction import ChipotleTransaction
+from Transactions.McdonaldsTransaction import McdonaldsTransaction
+from Transactions.FreelanceTransaction import FreelanceTransaction

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
 import { CategoryData } from "./types";
+import { getSpendingCategories } from "../lib/api";
 
 const EXCLUDED_CATEGORIES = new Set([
   'Rent', 
@@ -32,27 +33,24 @@ const SpendingCategories = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const accountId = import.meta.env.VITE_ACCOUNT_ID;
+    if (!accountId) {
+      setError("No account ID provided");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch('http://localhost:8080/api/analytics/spending?accountId=1234567891&timeRange=1%20month')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch categories: ${res.status} ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log(data);
+    getSpendingCategories(accountId)
+      .then(data => {
         if (!data || !data.topCategories) {
           throw new Error('Invalid data format received from server');
         }
         const categoryData: CategoryData = {}; 
-        console.log(data.topCategories);
-
         data.topCategories.forEach((cat: any) => { 
           if(cat.category != "Income"){ 
             categoryData[cat.category || 'Other'] = parseFloat(cat.totalSpent) || 0; 
           }
-
         });
         setCategories(categoryData);
         setError(null);
