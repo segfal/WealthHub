@@ -28,14 +28,14 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 func (h *Handler) HandleSpendingAnalytics(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling spending analytics request: %s", r.URL.String())
 	
-	accountID := r.URL.Query().Get("accountId")
+	accountID := r.URL.Query().Get("account_id")
 	if accountID == "" {
-		log.Printf("Missing accountId parameter")
-		http.Error(w, "accountId is required", http.StatusBadRequest)
+		log.Printf("Missing account_id parameter")
+		http.Error(w, "account_id is required", http.StatusBadRequest)
 		return
 	}
 
-	timeRange := r.URL.Query().Get("timeRange")
+	timeRange := r.URL.Query().Get("time_range")
 	if timeRange == "" {
 		timeRange = "1 month" // default to 1 month if not specified
 		log.Printf("Using default time range: %s", timeRange)
@@ -57,10 +57,10 @@ func (h *Handler) HandleSpendingAnalytics(w http.ResponseWriter, r *http.Request
 func (h *Handler) HandleTimePatterns(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling time patterns request: %s", r.URL.String())
 	
-	accountID := r.URL.Query().Get("accountId")
+	accountID := r.URL.Query().Get("account_id")
 	if accountID == "" {
-		log.Printf("Missing accountId parameter")
-		http.Error(w, "accountId is required", http.StatusBadRequest)
+		log.Printf("Missing account_id parameter")
+		http.Error(w, "account_id is required", http.StatusBadRequest)
 		return
 	}
 
@@ -85,10 +85,10 @@ func (h *Handler) HandleTimePatterns(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandlePredictions(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling predictions request: %s", r.URL.String())
 	
-	accountID := r.URL.Query().Get("accountId")
+	accountID := r.URL.Query().Get("account_id")
 	if accountID == "" {
-		log.Printf("Missing accountId parameter")
-		http.Error(w, "accountId is required", http.StatusBadRequest)
+		log.Printf("Missing account_id parameter")
+		http.Error(w, "account_id is required", http.StatusBadRequest)
 		return
 	}
 

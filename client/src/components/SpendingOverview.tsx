@@ -4,21 +4,23 @@ import { Card } from "./ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Analytics } from "./types";
 import { Loader2 } from "lucide-react";
-
+import { getSpendingOverview } from "../lib/api";
+  
 const SpendingOverview = () => {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const accountId = import.meta.env.VITE_ACCOUNT_ID;
+    if (!accountId) {
+      setError("No account ID provided");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch('http://localhost:8080/api/analytics/spending?accountId=1234567890&timeRange=1%20month')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch analytics: ${res.status} ${res.statusText}`);
-        }
-        return res.json();
-      })
+    getSpendingOverview(accountId)
       .then(data => {
         if (!data) {
           throw new Error('Invalid data format received from server');

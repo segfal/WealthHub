@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { AlertTriangle, Receipt, Calendar, Loader2 } from "lucide-react";
+import { getBillsOverview } from "../lib/api";
 
 // Categories that are considered bills/rent
 const BILL_CATEGORIES = new Set([
@@ -20,19 +21,18 @@ interface Bill {
   category: string;
   amount: number;
   dueDate: string;
-  merchant: string;
   status: 'paid' | 'upcoming' | 'overdue';
 }
 
-interface Transaction {
-  category: string;
-  amount: number;
-  date: string;
-  merchant: string;
-}
-
-interface SpendingResponse {
-  transactions: Transaction[];
+interface BillsResponse {
+  bills: Array<{
+    category: string;
+    amount: string;
+    dueDate: string;
+    status: string;
+  }>;
+  monthlyTotal: number;
+  totalBills: number;
 }
 
 const BillsOverview = () => {
@@ -42,35 +42,30 @@ const BillsOverview = () => {
   const [totalMonthlyBills, setTotalMonthlyBills] = useState(0);
 
   useEffect(() => {
+    const accountId = import.meta.env.VITE_ACCOUNT_ID;
+    if (!accountId) {
+      setError("No account ID provided");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch('http://localhost:8080/api/analytics/spending?accountId=1234567891&timeRange=1%20month')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch bills: ${res.status} ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((data: SpendingResponse) => {
-        if (!data || !data.transactions || !Array.isArray(data.transactions)) {
+    getBillsOverview(accountId)
+      .then((data: BillsResponse) => {
+        if (!data || !data.bills) {
           throw new Error('Invalid data format received from server');
         }
 
-        // Filter transactions to only include bills and recurring payments
-        const billTransactions = data.transactions.filter((t: Transaction) => 
-          t && t.category && BILL_CATEGORIES.has(t.category)
-        );
-
-        // Process transactions into bills
-        const processedBills = billTransactions.map((t: Transaction) => ({
-          category: t.category,
-          amount: Math.abs(t.amount),
-          dueDate: t.date,
-          merchant: t.merchant,
-          status: new Date(t.date) > new Date() ? 'upcoming' : 'paid'
+        // Process bills data
+        const processedBills = data.bills.map(bill => ({
+          category: bill.category,
+          amount: parseFloat(bill.amount),
+          dueDate: bill.dueDate,
+          status: bill.status as 'paid' | 'upcoming' | 'overdue'
         }));
 
         setBills(processedBills);
-        setTotalMonthlyBills(processedBills.reduce((sum, bill) => sum + bill.amount, 0));
+        setTotalMonthlyBills(data.monthlyTotal);
         setError(null);
       })
       .catch(err => {
@@ -138,7 +133,6 @@ const BillsOverview = () => {
                     <Calendar className="w-4 h-4 mr-1" />
                     <span>Due {new Date(bill.dueDate).toLocaleDateString()}</span>
                   </div>
-                  <div className="text-sm text-gray-500">{bill.merchant}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-medium">${bill.amount.toFixed(2)}</div>

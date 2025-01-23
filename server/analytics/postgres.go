@@ -20,6 +20,55 @@ func NewPostgresRepository(db *sql.DB) Repository {
 	return &postgresRepo{db: db}
 }
 
+// GetAccount retrieves account information from the database
+func (r *postgresRepo) GetAccount(ctx context.Context, accountID string) (*types.Account, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	log.Printf("Fetching account information for ID: %s", accountID)
+	// theres no bank details or bank account in this scheme so fix
+	query := `SELECT * FROM accounts WHERE account_id = $1`
+	account := &types.Account{
+		Balance:     types.Balance{},
+	}
+
+	// Use sql.NullString and sql.NullFloat64 to handle NULL values
+	err := r.db.QueryRowContext(ctx, query, accountID).Scan(
+		&account.AccountID,
+		&account.AccountName,
+		&account.AccountType,
+		&account.AccountNumber,
+		&account.Balance.Current,
+		&account.Balance.Available,
+		&account.Balance.Currency,
+		&account.OwnerName,
+	)
+
+	if err == sql.ErrNoRows {
+		log.Printf("No account found with ID: %s", accountID)
+		return nil, fmt.Errorf("account not found")
+	}
+	if err != nil {
+		log.Printf("Error fetching account: %v", err)
+		return nil, fmt.Errorf("failed to fetch account: %w", err)
+	}
+
+	// Convert NULL values to empty strings if they're not valid
+	if bankName.Valid {
+		account.BankDetails.BankName = bankName.String
+	}
+	if routingNumber.Valid {
+		account.BankDetails.RoutingNumber = routingNumber.String
+	}
+	if branch.Valid {
+		account.BankDetails.Branch = branch.String
+	}
+
+	log.Printf("Successfully retrieved account information for ID: %s", accountID)
+	return account, nil
+}
+
 func (r *postgresRepo) GetTransactions(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account ID is required")

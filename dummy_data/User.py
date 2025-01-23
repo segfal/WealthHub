@@ -1,4 +1,3 @@
-
 from Transactions.Transactions import Transaction
 import json
 from datetime import datetime
@@ -58,6 +57,7 @@ class User:
             # Round the amount to 2 decimal places
             tx_dict["amount"] = round(tx_dict["amount"], 2)
             
+            # Store the transaction data instead of the transaction object
             self.account["transactions"].append(tx_dict)
             
             # Update balance based on transaction amount
@@ -87,8 +87,23 @@ class User:
         self.account["balance"]["available"] = round(available_balance if available_balance is not None else current_balance, 2)
 
     def save_to_json(self, filename):
+        """Save user account data to JSON file"""
+        # Create a copy of the account data to ensure we're not modifying the original
+        account_data = {
+            "account": {
+                "account_id": self.account["account_id"],
+                "account_name": self.account["account_name"],
+                "account_type": self.account["account_type"],
+                "account_number": self.account["account_number"],
+                "balance": self.account["balance"],
+                "owner_name": self.account["owner_name"],
+                "bank_details": self.account["bank_details"],
+                "transactions": self.account["transactions"]
+            }
+        }
+        
         with open(filename, 'w') as f:
-            json.dump({"account": self.account}, f, indent=4)
+            json.dump(account_data, f, indent=4)
 
     def load_from_json(self, filename):
         with open(filename, 'r') as f:

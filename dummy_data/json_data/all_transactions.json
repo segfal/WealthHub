@@ -1,0 +1,15 @@
+[
+    {
+        "transaction_id": "TXN00001",
+        "account_id": 1234567891,
+        "date": "2025-01-01",
+        "amount": -2298,
+        "category": "Rent",
+        "merchant": "Park Avenue Apartments",
+        "location": "Manhattan, New York, NY",
+        "type": "ACH Transfer",
+        "status": "Completed",
+        "timestamp": "2025-01-22T13:39:36",
+        "payment_method": "ACH"
+    }
+]
