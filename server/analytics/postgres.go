@@ -27,13 +27,15 @@ func (r *postgresRepo) GetAccount(ctx context.Context, accountID string) (*types
 	}
 
 	log.Printf("Fetching account information for ID: %s", accountID)
-	// theres no bank details or bank account in this scheme so fix
-	query := `SELECT * FROM accounts WHERE account_id = $1`
+
+	query := `SELECT account_id, account_name, account_type, account_number, 
+	          balance_current, balance_available, balance_currency, owner_name 
+	          FROM users WHERE account_id = $1`
+
 	account := &types.Account{
-		Balance:     types.Balance{},
+		Balance: types.Balance{},
 	}
 
-	// Use sql.NullString and sql.NullFloat64 to handle NULL values
 	err := r.db.QueryRowContext(ctx, query, accountID).Scan(
 		&account.AccountID,
 		&account.AccountName,
@@ -52,17 +54,6 @@ func (r *postgresRepo) GetAccount(ctx context.Context, accountID string) (*types
 	if err != nil {
 		log.Printf("Error fetching account: %v", err)
 		return nil, fmt.Errorf("failed to fetch account: %w", err)
-	}
-
-	// Convert NULL values to empty strings if they're not valid
-	if bankName.Valid {
-		account.BankDetails.BankName = bankName.String
-	}
-	if routingNumber.Valid {
-		account.BankDetails.RoutingNumber = routingNumber.String
-	}
-	if branch.Valid {
-		account.BankDetails.Branch = branch.String
 	}
 
 	log.Printf("Successfully retrieved account information for ID: %s", accountID)
