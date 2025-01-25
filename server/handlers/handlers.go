@@ -90,6 +90,53 @@ func SetupRoutes(router *mux.Router, db *sql.DB) {
 		json.NewEncoder(w).Encode(response)
 	}).Methods("GET")
 
+	//Bills Route 
+	router.HandleFunc("/api/bills/{accountId}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		accountID := vars["accountId"]
+		
+		billPayments, err := repo.GetBillTotals(r.Context(), accountID, "1 month")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Transform the data into the expected format
+		type BillPayment struct { 
+			Category    string  `json:"category"`
+			TotalSpent  float64 `json:"totalSpent"`
+			Percentage  string  `json:"percentage"`  
+		}
+
+		// Calculate totals by merchant
+		merchantTotals := make(map[string]float64)
+		var totalSpent float64
+		
+		for _, payment := range billPayments {
+			amount := math.Abs(payment.Amount)
+			merchantTotals[payment.Merchant] += amount
+			totalSpent += amount
+		}
+
+		var topBills []BillPayment
+		for merchant, amount := range merchantTotals {
+			percentage := (amount / totalSpent) * 100
+			topBills = append(topBills, BillPayment{
+				Category:   merchant,
+				TotalSpent: amount,
+				Percentage: fmt.Sprintf("%.2f", percentage),
+			})
+		}
+
+		response := map[string]interface{}{
+			"topBills": topBills,
+			"totalSpent": totalSpent,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}).Methods("GET")
+
 	// Predictions route
 	router.HandleFunc("/api/predictions/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)

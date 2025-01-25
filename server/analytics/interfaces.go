@@ -32,5 +32,7 @@ type Repository interface {
 	GetCategoryTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error)
 	
 	// GetAccount retrieves account information
-	GetAccount(ctx context.Context, accountID string) (*types.Account, error)
+	GetAccount(ctx context.Context, accountID string) (*types.Account, error) 
+
+	GetBillTotals(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error)
 } 
