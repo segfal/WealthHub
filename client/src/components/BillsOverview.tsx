@@ -4,7 +4,7 @@ import { Card } from "./ui/card";
 import { AlertTriangle, Receipt, Calendar, Loader2 } from "lucide-react";
 import { getBillsOverview } from "../lib/api";
 
-// Categories that are considered bills/rent
+// Categories that are considered bills/rent and others
 const BILL_CATEGORIES = new Set([
   'Rent',
   'Utilities',
