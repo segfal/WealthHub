@@ -42,15 +42,15 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 		})
 	} 
 
+	billTotals, err := s.repo.GetBillTotals(ctx, accountID, timeRange)
 	var totalSpentBills float64
 	var topBills []types.BillPayment
 	for category, amount := range billTotals {
-		totalSpent += amount
+		totalSpentBills += amount
 		topBills = append(topBills, types.BillPayment{
 			Category:   category,
 			TotalSpent: fmt.Sprintf("%.2f", amount),
-			Percentage: fmt.Sprintf("%.2f", (amount/totalSpent)*100), 
-			Time:		fmt.Sprintf(),  
+			Percentage: fmt.Sprintf("%.2f", (amount/totalSpentBills)*100), 
 		})
 	}
 
