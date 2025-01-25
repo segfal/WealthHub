@@ -6,5 +6,5 @@ package types
 // - CategorySpend.go
 // - TimePattern.go
 // - PredictedSpend.go
-
+//to-do: 
 // ... existing code ...
