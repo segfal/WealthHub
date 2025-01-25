@@ -90,6 +90,40 @@ func SetupRoutes(router *mux.Router, db *sql.DB) {
 		json.NewEncoder(w).Encode(response)
 	}).Methods("GET")
 
+	//Bills Route 
+	router.HandleFunc("/api/categories/{accountId}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		accountID := vars["accountId"]
+		
+		billTotals, err := repo.GetBillTotals(r.Context(), accountID, "1 month")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Transform the data into the expected format
+		type BillPayment struct { 
+			Category    string  `json:"category"`
+			TotalSpent  float64 `json:"totalSpent"`
+			Percentage  string `json:"percentage"`  
+		}
+
+		var topBills []BillPayment
+		for category, amount := range billTotals {
+			topBills = append(topBills, BillPayment{
+				Category:   category,
+				TotalSpent: amount, 
+			})
+		}
+
+		response := map[string]interface{}{
+			"topBills": topBills,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}).Methods("GET")
+
 	// Predictions route
 	router.HandleFunc("/api/predictions/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
