@@ -95,7 +95,7 @@ func SetupRoutes(router *mux.Router, db *sql.DB) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
 		
-		billTotals, err := repo.GetBillTotals(r.Context(), accountID, "1 month")
+		billPayments, err := repo.GetBillTotals(r.Context(), accountID, "1 month")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -105,19 +105,32 @@ func SetupRoutes(router *mux.Router, db *sql.DB) {
 		type BillPayment struct { 
 			Category    string  `json:"category"`
 			TotalSpent  float64 `json:"totalSpent"`
-			Percentage  string `json:"percentage"`  
+			Percentage  string  `json:"percentage"`  
+		}
+
+		// Calculate totals by merchant
+		merchantTotals := make(map[string]float64)
+		var totalSpent float64
+		
+		for _, payment := range billPayments {
+			amount := math.Abs(payment.Amount)
+			merchantTotals[payment.Merchant] += amount
+			totalSpent += amount
 		}
 
 		var topBills []BillPayment
-		for category, amount := range billTotals {
+		for merchant, amount := range merchantTotals {
+			percentage := (amount / totalSpent) * 100
 			topBills = append(topBills, BillPayment{
-				Category:   category,
-				TotalSpent: amount, 
+				Category:   merchant,
+				TotalSpent: amount,
+				Percentage: fmt.Sprintf("%.2f", percentage),
 			})
 		}
 
 		response := map[string]interface{}{
 			"topBills": topBills,
+			"totalSpent": totalSpent,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

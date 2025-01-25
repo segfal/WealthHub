@@ -42,22 +42,34 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 		})
 	} 
 
-	billTotals, err := s.repo.GetBillTotals(ctx, accountID, timeRange)
+	billPayments, err := s.repo.GetBillTotals(ctx, accountID, timeRange)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bill payments: %w", err)
+	}
+
 	var totalSpentBills float64
-	var topBills []types.BillPayment
-	for category, amount := range billTotals {
+	billTotalsByMerchant := make(map[string]float64)
+	
+	// Calculate totals by merchant for bill payments
+	for _, payment := range billPayments {
+		amount := math.Abs(payment.Amount)
 		totalSpentBills += amount
+		billTotalsByMerchant[payment.Merchant] += amount
+	}
+
+	var topBills []types.BillPayment
+	for merchant, amount := range billTotalsByMerchant {
 		topBills = append(topBills, types.BillPayment{
-			Category:   category,
+			Category:   merchant,
 			TotalSpent: fmt.Sprintf("%.2f", amount),
-			Percentage: fmt.Sprintf("%.2f", (amount/totalSpentBills)*100), 
+			Percentage: fmt.Sprintf("%.2f", (amount/totalSpentBills)*100),
 		})
 	}
 
 	// Sort by amount spent
-	sort.Slice(topCategories, func(i, j int) bool {
-		amtI, _ := strconv.ParseFloat(topCategories[i].TotalSpent, 64)
-		amtJ, _ := strconv.ParseFloat(topCategories[j].TotalSpent, 64)
+	sort.Slice(topBills, func(i, j int) bool {
+		amtI, _ := strconv.ParseFloat(topBills[i].TotalSpent, 64)
+		amtJ, _ := strconv.ParseFloat(topBills[j].TotalSpent, 64)
 		return amtI > amtJ
 	})
 

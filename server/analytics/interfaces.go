@@ -34,5 +34,5 @@ type Repository interface {
 	// GetAccount retrieves account information
 	GetAccount(ctx context.Context, accountID string) (*types.Account, error) 
 
-	GetBillTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error);
+	GetBillTotals(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error)
 } 

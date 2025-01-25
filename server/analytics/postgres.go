@@ -162,41 +162,51 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 }  
 
 //Bills 
-func (r *postgresRepo) GetBillTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error) {
+func (r *postgresRepo) GetBillTotals(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account ID is required")
 	}
 
-	log.Printf("Fetching bill totals for account %s with time range %s", accountID, timeRange)
+	log.Printf("Fetching bill payments for account %s with time range %s", accountID, timeRange)
 
 	query := `
-		SELECT category
+		SELECT transaction_id, account_id, date, amount, category, merchant, location
 		FROM transactions 
 		WHERE account_id = $1 
-		  AND date >= NOW() - $2::INTERVAL AND category = 'Bill Payment'
-		`
+		  AND date >= NOW() - $2::INTERVAL 
+		  AND category = 'Bill Payment'
+		ORDER BY date DESC`
 	
 	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
 	if err != nil {
-		log.Printf("Error querying category totals: %v", err)
-		return nil, fmt.Errorf("failed to query category totals: %w", err)
+		log.Printf("Error querying bill payments: %v", err)
+		return nil, fmt.Errorf("failed to query bill payments: %w", err)
 	}
 	defer rows.Close()
 
-	categoryTotals := make(map[string]float64)
+	var billPayments []types.Transaction
 	for rows.Next() {
-		var category string
-		if err := rows.Scan(&category); err != nil {
-			log.Printf("Error scanning category total: %v", err)
-			return nil, fmt.Errorf("failed to scan category total: %w", err)
+		var t types.Transaction
+		if err := rows.Scan(
+			&t.TransactionID,
+			&t.AccountID,
+			&t.Date,
+			&t.Amount,
+			&t.Category,
+			&t.Merchant,
+			&t.Location,
+		); err != nil {
+			log.Printf("Error scanning bill payment: %v", err)
+			return nil, fmt.Errorf("failed to scan bill payment: %w", err)
 		}
+		billPayments = append(billPayments, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error iterating category totals: %v", err)
-		return nil, fmt.Errorf("error iterating category totals: %w", err)
+		log.Printf("Error iterating bill payments: %v", err)
+		return nil, fmt.Errorf("error iterating bill payments: %w", err)
 	}
 
-	log.Printf("Found %d categories for account %s", len(categoryTotals), accountID)
-	return categoryTotals, nil
+	log.Printf("Found %d bill payments for account %s", len(billPayments), accountID)
+	return billPayments, nil
 } 
