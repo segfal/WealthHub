@@ -91,7 +91,7 @@ func SetupRoutes(router *mux.Router, db *sql.DB) {
 	}).Methods("GET")
 
 	//Bills Route 
-	router.HandleFunc("/api/categories/{accountId}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/api/bills/{accountId}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		accountID := vars["accountId"]
 		

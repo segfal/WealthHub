@@ -159,4 +159,44 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 
 	log.Printf("Found %d categories for account %s", len(categoryTotals), accountID)
 	return categoryTotals, nil
+}  
+
+//Bills 
+func (r *postgresRepo) GetBillTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	log.Printf("Fetching bill totals for account %s with time range %s", accountID, timeRange)
+
+	query := `
+		SELECT category
+		FROM transactions 
+		WHERE account_id = $1 
+		  AND date >= NOW() - $2::INTERVAL AND category = 'Bill Payment'
+		`
+	
+	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
+	if err != nil {
+		log.Printf("Error querying category totals: %v", err)
+		return nil, fmt.Errorf("failed to query category totals: %w", err)
+	}
+	defer rows.Close()
+
+	categoryTotals := make(map[string]float64)
+	for rows.Next() {
+		var category string
+		if err := rows.Scan(&category); err != nil {
+			log.Printf("Error scanning category total: %v", err)
+			return nil, fmt.Errorf("failed to scan category total: %w", err)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating category totals: %v", err)
+		return nil, fmt.Errorf("error iterating category totals: %w", err)
+	}
+
+	log.Printf("Found %d categories for account %s", len(categoryTotals), accountID)
+	return categoryTotals, nil
 } 
