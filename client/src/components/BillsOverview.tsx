@@ -35,7 +35,21 @@ const BillsOverview = () => {
       setLoading(false);
       return;
     }
-    // TODO :
+    // TODO : 
+      setLoading(true);
+      getBillsIncomeAnalysis(accountId)
+        .then((data: AnalysisResponse) => { 
+          setAnalysis(data); 
+          setError(null);
+        }) 
+        .catch(err => { 
+          console.error('YOU FOOL, YOU NOT GETTING ANY DATA')
+          setError(err.message)
+        })
+        .finally(() => setLoading(false));
+      }, []);
+
+
     
 
   if (loading) {
