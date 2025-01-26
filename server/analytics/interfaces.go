@@ -21,6 +21,12 @@ type Service interface {
 	
 	// PredictSpending generates spending predictions for each category
 	PredictSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error)
+
+	// GetMonthlyIncome retrieves income transactions for a specific month
+	GetMonthlyIncome(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetBillPayments retrieves bill payment transactions for a specific month
+	GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
 }
 
 // Repository defines the interface for analytics data operations
@@ -34,5 +40,9 @@ type Repository interface {
 	// GetAccount retrieves account information
 	GetAccount(ctx context.Context, accountID string) (*types.Account, error) 
 
-	GetBillTotals(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error)
+	// GetMonthlyIncome retrieves income transactions for a specific month
+	GetMonthlyIncome(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetBillPayments retrieves bill payment transactions for a specific month
+	GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
 } 
