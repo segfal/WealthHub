@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	billsHandlers "server/bills/handler"
+	categoriesHandlers "server/categories/handler"
 	"server/crud"
 	analyticsHandlers "server/handlers/analytics"
-	"server/handlers/bills"
-	"server/handlers/categories"
-	"server/handlers/income"
+	incomeHandlers "server/income/handler"
 
 	"github.com/gorilla/mux"
 )
@@ -17,9 +17,9 @@ import (
 func SetupRoutes(router *mux.Router, db *sql.DB) {
 	// Setup routes from each package
 	analyticsHandlers.SetupAnalyticsRoutes(router, db)
-	bills.SetupBillRoutes(router, db)
-	categories.SetupCategoryRoutes(router, db)
-	income.SetupIncomeRoutes(router, db)
+	billsHandlers.SetupBillRoutes(router, db)
+	categoriesHandlers.SetupCategoryRoutes(router, db)
+	incomeHandlers.SetupIncomeRoutes(router, db)
 
 	// User route
 	router.HandleFunc("/api/user/{accountId}", func(w http.ResponseWriter, r *http.Request) {

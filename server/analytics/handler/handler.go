@@ -1,29 +1,30 @@
-package analytics
+package handler
 
 import (
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
-	"server/analytics"
+	"server/analytics/repository"
+	"server/analytics/service"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
 type Handler struct {
-	service analytics.Service
+	service service.Service
 }
 
-func NewHandler(service analytics.Service) *Handler {
+func NewHandler(service service.Service) *Handler {
 	return &Handler{service: service}
 }
 
-// SetupAnalyticsRoutes configures all the analytics-related routes for the API
-func SetupAnalyticsRoutes(router *mux.Router, db *sql.DB) {
-	repo := analytics.NewPostgresRepository(db)
-	service := analytics.NewService(repo)
-	handler := NewHandler(service)
+// SetupRoutes configures all the analytics-related routes for the API
+func SetupRoutes(router *mux.Router, db *sql.DB) {
+	repo := repository.NewPostgresRepository(db)
+	svc := service.NewService(repo)
+	handler := NewHandler(svc)
 
 	// Register all routes
 	handler.RegisterRoutes(router)
@@ -147,4 +148,4 @@ func (h *Handler) HandleInsights(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Successfully generated insights for account %s", accountID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-}
+} 
