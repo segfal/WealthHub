@@ -161,30 +161,70 @@ func (r *postgresRepo) GetCategoryTotals(ctx context.Context, accountID string, 
 	return categoryTotals, nil
 }  
 
-//Bills 
-func (r *postgresRepo) GetBillTotals(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error) {
+//"SELECT * FROM transactions WHERE account_id = %s AND category = %s OR category = %s AND date >= '2025-01-01 00:00:00' AND date <= '2025-01-31 23:59:59'"
+//"SELECT * FROM transactions WHERE account_id = %s AND category = %s AND date >= '2025-01-01 00:00:00' AND date <= '2025-01-31 23:59:59'"
+
+//for both functions it should be beginning of month and end of month
+
+//* create an enum for month and how many days in each month
+
+
+// MonthDays maps each month number (1-12) to its number of days
+var MonthDays = map[int]int{
+	1:  31, // January
+	2:  28, // February (non-leap year)
+	3:  31, // March 
+	4:  30, // April
+	5:  31, // May
+	6:  30, // June
+	7:  31, // July
+	8:  31, // August 
+	9:  30, // September
+	10: 31, // October
+	11: 30, // November
+	12: 31, // December
+}
+
+// IsLeapYear returns true if the given year is a leap year
+func IsLeapYear(year int) bool {
+	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
+}
+
+// GetDaysInMonth returns the number of days in the given month/year
+func GetDaysInMonth(year, month int) int {
+	if month == 2 && IsLeapYear(year) {
+		return 29
+	}
+	return MonthDays[month]
+}
+
+// GetMonthlyIncome retrieves income transactions for a specific month
+func (r *postgresRepo) GetMonthlyIncome(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
 	if accountID == "" {
 		return nil, fmt.Errorf("account ID is required")
 	}
 
-	log.Printf("Fetching bill payments for account %s with time range %s", accountID, timeRange)
+	daysInMonth := GetDaysInMonth(year, month)
+	startDate := fmt.Sprintf("%d-%02d-01 00:00:00", year, month)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, daysInMonth)
 
 	query := `
 		SELECT transaction_id, account_id, date, amount, category, merchant, location
 		FROM transactions 
 		WHERE account_id = $1 
-		  AND date >= NOW() - $2::INTERVAL 
-		  AND category = 'Bill Payment'
+		  AND category = 'Income'
+		  AND date >= $2
+		  AND date <= $3
 		ORDER BY date DESC`
-	
-	rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
 	if err != nil {
-		log.Printf("Error querying bill payments: %v", err)
-		return nil, fmt.Errorf("failed to query bill payments: %w", err)
+		log.Printf("Error querying monthly income: %v", err)
+		return nil, fmt.Errorf("failed to query monthly income: %w", err)
 	}
 	defer rows.Close()
 
-	var billPayments []types.Transaction
+	var transactions []types.Transaction
 	for rows.Next() {
 		var t types.Transaction
 		if err := rows.Scan(
@@ -196,17 +236,68 @@ func (r *postgresRepo) GetBillTotals(ctx context.Context, accountID string, time
 			&t.Merchant,
 			&t.Location,
 		); err != nil {
-			log.Printf("Error scanning bill payment: %v", err)
-			return nil, fmt.Errorf("failed to scan bill payment: %w", err)
+			log.Printf("Error scanning transaction: %v", err)
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
 		}
-		billPayments = append(billPayments, t)
+		transactions = append(transactions, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error iterating bill payments: %v", err)
-		return nil, fmt.Errorf("error iterating bill payments: %w", err)
+		log.Printf("Error iterating transactions: %v", err)
+		return nil, fmt.Errorf("error iterating transactions: %w", err)
 	}
 
-	log.Printf("Found %d bill payments for account %s", len(billPayments), accountID)
-	return billPayments, nil
-} 
+	return transactions, nil
+}
+
+// GetBillPayments retrieves bill payment transactions for a specific month
+func (r *postgresRepo) GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	daysInMonth := GetDaysInMonth(year, month)
+	startDate := fmt.Sprintf("%d-%02d-01 00:00:00", year, month)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, daysInMonth)
+
+	query := `
+		SELECT transaction_id, account_id, date, amount, category, merchant, location
+		FROM transactions 
+		WHERE account_id = $1 
+		  AND (category = 'Bill Payment' OR category = 'Subscription')
+		  AND date >= $2
+		  AND date <= $3
+		ORDER BY date DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+	if err != nil {
+		log.Printf("Error querying bill payments: %v", err)
+		return nil, fmt.Errorf("failed to query bill payments: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []types.Transaction
+	for rows.Next() {
+		var t types.Transaction
+		if err := rows.Scan(
+			&t.TransactionID,
+			&t.AccountID,
+			&t.Date,
+			&t.Amount,
+			&t.Category,
+			&t.Merchant,
+			&t.Location,
+		); err != nil {
+			log.Printf("Error scanning transaction: %v", err)
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating transactions: %v", err)
+		return nil, fmt.Errorf("error iterating transactions: %w", err)
+	}
+
+	return transactions, nil
+}

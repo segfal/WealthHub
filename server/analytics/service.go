@@ -42,7 +42,9 @@ func (s *service) AnalyzeSpending(ctx context.Context, accountID string, timeRan
 		})
 	} 
 
-	billPayments, err := s.repo.GetBillTotals(ctx, accountID, timeRange)
+	// Get current month's bill payments
+	now := time.Now()
+	billPayments, err := s.repo.GetBillPayments(ctx, accountID, now.Year(), int(now.Month()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bill payments: %w", err)
 	}
@@ -253,4 +255,24 @@ func timeRangeToMonths(timeRange string) float64 {
 	default:
 		return 1
 	}
+}
+
+// GetMonthlyIncome implements Service.GetMonthlyIncome
+func (s *service) GetMonthlyIncome(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
+	return s.repo.GetMonthlyIncome(ctx, accountID, year, month)
+}
+
+// GetBillPayments implements Service.GetBillPayments
+func (s *service) GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
+	return s.repo.GetBillPayments(ctx, accountID, year, month)
 } 

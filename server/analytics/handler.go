@@ -2,8 +2,11 @@ package analytics
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -22,6 +25,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/analytics/spending", h.HandleSpendingAnalytics).Methods("GET")
 	router.HandleFunc("/api/analytics/patterns", h.HandleTimePatterns).Methods("GET")
 	router.HandleFunc("/api/analytics/predictions", h.HandlePredictions).Methods("GET")
+	router.HandleFunc("/api/analytics/income/monthly", h.HandleMonthlyIncome).Methods("GET")
+	router.HandleFunc("/api/analytics/bills/monthly", h.HandleMonthlyBills).Methods("GET")
 }
 
 // HandleSpendingAnalytics handles requests for spending analytics
@@ -102,4 +107,141 @@ func (h *Handler) HandlePredictions(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Successfully generated predictions for account %s", accountID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(predictions)
+}
+
+// HandleMonthlyIncome handles requests for monthly income data
+func (h *Handler) HandleMonthlyIncome(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Handling monthly income request: %s", r.URL.String())
+	
+	accountID := r.URL.Query().Get("account_id")
+	if accountID == "" {
+		log.Printf("Missing account_id parameter")
+		http.Error(w, "account_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get year and month from query params, default to current month
+	now := time.Now()
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+
+	year := now.Year()
+	month := int(now.Month())
+
+	if yearStr != "" {
+		var err error
+		year, err = strconv.Atoi(yearStr)
+		if err != nil {
+			log.Printf("Invalid year parameter: %s", yearStr)
+			http.Error(w, "Invalid year parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if monthStr != "" {
+		var err error
+		month, err = strconv.Atoi(monthStr)
+		if err != nil || month < 1 || month > 12 {
+			log.Printf("Invalid month parameter: %s", monthStr)
+			http.Error(w, "Invalid month parameter (must be 1-12)", http.StatusBadRequest)
+			return
+		}
+	}
+
+	transactions, err := h.service.GetMonthlyIncome(r.Context(), accountID, year, month)
+	if err != nil {
+		log.Printf("Error getting monthly income: %v", err)
+		http.Error(w, "Failed to get monthly income", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"transactions": transactions,
+		"year":        year,
+		"month":       month,
+	}
+
+	log.Printf("Successfully retrieved monthly income for account %s", accountID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// HandleMonthlyBills handles requests for monthly bill payment data
+func (h *Handler) HandleMonthlyBills(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Handling monthly bills request: %s", r.URL.String())
+	
+	accountID := r.URL.Query().Get("account_id")
+	if accountID == "" {
+		log.Printf("Missing account_id parameter")
+		http.Error(w, "account_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get year and month from query params, default to current month
+	now := time.Now()
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+
+	year := now.Year()
+	month := int(now.Month())
+
+	if yearStr != "" {
+		var err error
+		year, err = strconv.Atoi(yearStr)
+		if err != nil {
+			log.Printf("Invalid year parameter: %s", yearStr)
+			http.Error(w, "Invalid year parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if monthStr != "" {
+		var err error
+		month, err = strconv.Atoi(monthStr)
+		if err != nil || month < 1 || month > 12 {
+			log.Printf("Invalid month parameter: %s", monthStr)
+			http.Error(w, "Invalid month parameter (must be 1-12)", http.StatusBadRequest)
+			return
+		}
+	}
+
+	transactions, err := h.service.GetBillPayments(r.Context(), accountID, year, month)
+	if err != nil {
+		log.Printf("Error getting monthly bills: %v", err)
+		http.Error(w, "Failed to get monthly bills", http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate totals by merchant
+	merchantTotals := make(map[string]float64)
+	var totalSpent float64
+	
+	for _, payment := range transactions {
+		amount := math.Abs(payment.Amount)
+		merchantTotals[payment.Merchant] += amount
+		totalSpent += amount
+	}
+
+	// Transform to response format
+	var billDetails []map[string]interface{}
+	for merchant, amount := range merchantTotals {
+		percentage := (amount / totalSpent) * 100
+		billDetails = append(billDetails, map[string]interface{}{
+			"merchant":   merchant,
+			"amount":     amount,
+			"percentage": fmt.Sprintf("%.2f", percentage),
+		})
+	}
+
+	response := map[string]interface{}{
+		"transactions": transactions,
+		"billDetails": billDetails,
+		"totalSpent":  totalSpent,
+		"year":        year,
+		"month":       month,
+	}
+
+	log.Printf("Successfully retrieved monthly bills for account %s", accountID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 } 
