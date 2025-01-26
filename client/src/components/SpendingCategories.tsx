@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { Progress } from "./ui/progress";
-import { CategoryData } from "./types";
-import { getSpendingCategories } from "../lib/api";
 import { PieChart } from "lucide-react";
+import { getCategoryTotals } from "../lib/api";
 
 const EXCLUDED_CATEGORIES = new Set([
   'Rent', 
@@ -19,16 +17,11 @@ const EXCLUDED_CATEGORIES = new Set([
   'Gas Bill'
 ]);
 
-interface PredictedSpend {
-  category: string;
-  likelihood: number;
-  predictedDate: string;
-  warning: string;
-  amount: number;
+interface CategoryData {
+  [key: string]: number;
 }
 
 const SpendingCategories = () => {
-  const [predictions, setPredictions] = useState<PredictedSpend[]>([]);
   const [categories, setCategories] = useState<CategoryData>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,15 +35,16 @@ const SpendingCategories = () => {
     }
 
     setLoading(true);
-    getSpendingCategories(accountId)
+    getCategoryTotals(accountId)
       .then(data => {
-        if (!data || !data.topCategories) {
+        if (!data || typeof data !== 'object') {
           throw new Error('Invalid data format received from server');
         }
-        const categoryData: CategoryData = {}; 
-        data.topCategories.forEach((cat: any) => { 
-          if(cat.category != "Income"){ 
-            categoryData[cat.category || 'Other'] = parseFloat(cat.totalSpent) || 0; 
+        const categoryData: CategoryData = {};
+        // Filter out excluded categories and format the data
+        Object.entries(data).forEach(([category, amount]) => {
+          if (!EXCLUDED_CATEGORIES.has(category)) {
+            categoryData[category] = parseFloat(amount as string) || 0;
           }
         });
         setCategories(categoryData);

@@ -363,3 +363,4 @@ func (s *service) GetMonthlyPatterns(ctx context.Context, accountID string, year
 
 	return patterns, nil
 } 
+

@@ -1,31 +1,44 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { Analytics } from "./types";
-import { Loader2, TrendingUp, CreditCard, Wallet, ArrowUpRight, Sparkles, DollarSign } from "lucide-react";
+import { AlertTriangle, DollarSign, CreditCard, LineChart, Loader2 } from "lucide-react";
 import { getSpendingOverview } from "../lib/api";
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.6, -0.05, 0.01, 0.99]
-    }
-  },
-  hover: {
-    scale: 1.02,
-    transition: {
-      duration: 0.2,
-      ease: "easeInOut"
-    }
-  }
-};
+interface SpendingData {
+  account: {
+    account_id: string;
+    account_name: string;
+    account_type: string;
+    account_number: string;
+    balance: {
+      current: number;
+      available: number;
+      currency: string;
+    };
+  };
+  top_categories: Array<{
+    category: string;
+    total: number;
+    percentage: number;
+  }>;
+  spending_patterns: Array<{
+    day: string;
+    amount: number;
+  }>;
+  predicted_spending: Array<{
+    month: string;
+    amount: number;
+  }>;
+  total_spent: number;
+  monthly_average: number;
+  active_categories: number;
+  spending_ratio: number;
+  category_diversity: number;
+  tips: string[];
+}
 
 const SpendingOverview = () => {
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [spendingData, setSpendingData] = useState<SpendingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,22 +53,45 @@ const SpendingOverview = () => {
     setLoading(true);
     getSpendingOverview(accountId)
       .then(data => {
-        if (!data) {
-          throw new Error('Invalid data format received from server');
+        if (!data || typeof data.total_spent === 'undefined' || !data.account) {
+          throw new Error('Invalid spending data format');
         }
-        setAnalytics({
-          totalSpent: data.totalSpent || 0,
-          averageTransaction: data.monthlyAverage || 0,
-          transactionCount: data.topCategories?.length || 0,
-          spendingTrend: data.spendingPatterns?.map((pattern: any) => ({
-            date: pattern.dayOfWeek || 'Unknown',
-            amount: pattern.totalSpent || 0
-          })) || []
+        
+        // Calculate active categories from top_categories
+        const activeCategories = data.top_categories?.length || 0;
+        
+        // Calculate spending ratio (total spent vs monthly average)
+        const spendingRatio = data.monthly_average > 0 ? 
+          data.total_spent / data.monthly_average : 0;
+        
+        // Calculate category diversity (number of categories / max categories)
+        const categoryDiversity = activeCategories / 10; // Assuming max of 10 categories
+        
+        // Generate tips based on spending patterns
+        const tips = [];
+        if (spendingRatio < 0.7) {
+          tips.push("Great job maintaining your spending habits!");
+        } else {
+          tips.push("Consider reviewing your discretionary spending");
+        }
+        
+        if (categoryDiversity > 0.5) {
+          tips.push("Good category distribution!");
+        } else {
+          tips.push("Try diversifying your spending categories");
+        }
+
+        setSpendingData({
+          ...data,
+          active_categories: activeCategories,
+          spending_ratio: spendingRatio,
+          category_diversity: categoryDiversity,
+          tips
         });
         setError(null);
       })
       .catch(err => {
-        console.error('Error fetching analytics:', err);
+        console.error('Error fetching spending overview:', err);
         setError(err.message);
       })
       .finally(() => setLoading(false));
@@ -64,81 +100,30 @@ const SpendingOverview = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ 
-            scale: [0.8, 1, 0.8],
-            opacity: [0, 1, 0.8]
-          }}
-          transition={{ 
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="relative"
-        >
-          <Loader2 className="w-12 h-12 text-[#00C805]" />
-          <motion.div
-            className="absolute inset-0 rounded-full bg-[#00C805]/20 blur-xl"
-            animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.5, 0.2, 0.5]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        </motion.div>
+        <Loader2 className="w-8 h-8 animate-spin text-[#00C805]" />
       </div>
     );
   }
 
-  if (error) {
+  if (error || !spendingData) {
     return (
-      <div className="text-center text-red-500 p-4">
-        <p>Error: {error}</p>
-      </div>
+      <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+        <div className="text-center text-red-400">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+          <p>{error || "Failed to load spending overview"}</p>
+        </div>
+      </Card>
     );
   }
-
-  const getSpendingStatus = () => {
-    const monthlyAvg = analytics?.averageTransaction || 0;
-    const total = analytics?.totalSpent || 0;
-    
-    if (total < monthlyAvg * 0.8) {
-      return {
-        message: "Under Average 🎯",
-        color: "text-green-500",
-        trend: "down"
-      };
-    } else if (total > monthlyAvg * 1.2) {
-      return {
-        message: "Over Average ⚠️",
-        color: "text-red-500",
-        trend: "up"
-      };
-    }
-    return {
-      message: "On Track ✨",
-      color: "text-[#00C805]",
-      trend: "stable"
-    };
-  };
-
-  const spendingStatus = getSpendingStatus();
 
   return (
-    <div className="space-y-8">
-      {/* Financial Overview Cards */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-6">
+      {/* Total Spent */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover="hover"
-          className="col-span-1"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
         >
           <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
             <motion.div
@@ -146,29 +131,29 @@ const SpendingOverview = () => {
               initial={false}
             />
             <div className="relative">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-medium text-zinc-400">Total Spent</h3>
-                  <p className="text-3xl font-bold mt-1 text-white">${analytics?.totalSpent.toFixed(2) || '0.00'}</p>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl">
-                  <DollarSign className="w-6 h-6 text-[#00C805]" />
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium flex items-center text-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <DollarSign className="w-5 h-5 text-[#00C805]" />
+                  </div>
+                  Total Spent
+                </h3>
+                <span className="text-2xl font-bold text-[#00C805]">
+                  ${spendingData.total_spent.toFixed(2)}
+                </span>
               </div>
-              <div className={`flex items-center ${spendingStatus.color}`}>
-                <span className="text-sm font-medium">{spendingStatus.message}</span>
-                {spendingStatus.trend === "up" && <ArrowUpRight className="w-4 h-4 ml-1" />}
+              <div className="text-sm text-zinc-400">
+                {spendingData.spending_ratio < 0.7 ? "On Track" : "High Spending"}
               </div>
             </div>
           </Card>
         </motion.div>
 
+        {/* Monthly Average */}
         <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover="hover"
-          className="col-span-1"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
             <motion.div
@@ -176,28 +161,27 @@ const SpendingOverview = () => {
               initial={false}
             />
             <div className="relative">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-medium text-zinc-400">Monthly Average</h3>
-                  <p className="text-3xl font-bold mt-1 text-white">${analytics?.averageTransaction.toFixed(2) || '0.00'}</p>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl">
-                  <CreditCard className="w-6 h-6 text-[#00C805]" />
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium flex items-center text-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <CreditCard className="w-5 h-5 text-[#00C805]" />
+                  </div>
+                  Monthly Average
+                </h3>
+                <span className="text-2xl font-bold text-[#00C805]">
+                  ${spendingData.monthly_average.toFixed(2)}
+                </span>
               </div>
-              <div className="text-zinc-400 text-sm">
-                Based on last 30 days
-              </div>
+              <div className="text-sm text-zinc-400">Based on last 30 days</div>
             </div>
           </Card>
         </motion.div>
 
+        {/* Active Categories */}
         <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover="hover"
-          className="col-span-1"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
             <motion.div
@@ -205,115 +189,81 @@ const SpendingOverview = () => {
               initial={false}
             />
             <div className="relative">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-medium text-zinc-400">Active Categories</h3>
-                  <p className="text-3xl font-bold mt-1 text-white">{analytics?.transactionCount || 0}</p>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl">
-                  <Wallet className="w-6 h-6 text-[#00C805]" />
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium flex items-center text-white">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <LineChart className="w-5 h-5 text-[#00C805]" />
+                  </div>
+                  Active Categories
+                </h3>
+                <span className="text-2xl font-bold text-[#00C805]">
+                  {spendingData.active_categories}
+                </span>
               </div>
-              <div className="text-zinc-400 text-sm">
-                Spending categories this month
-              </div>
+              <div className="text-sm text-zinc-400">Spending categories this month</div>
             </div>
           </Card>
         </motion.div>
       </div>
 
-      {/* Financial Health Score */}
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover="hover"
-      >
-        <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
-          <motion.div
-            className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
-            initial={false}
-          />
-          <div className="relative">
-            <div className="flex items-center mb-6">
-              <TrendingUp className="w-5 h-5 mr-2 text-[#00C805]" />
-              <h3 className="text-lg font-medium text-white">Financial Health Overview</h3>
-              <motion.div
-                className="ml-2"
-                animate={{
-                  rotate: 360,
-                  scale: [1, 1.2, 1]
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-              >
-                <Sparkles className="w-4 h-4 text-[#00C805]" />
-              </motion.div>
-            </div>
-            
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-zinc-400">Spending Ratio</span>
-                    <span className="text-sm font-medium text-white">
-                      {((analytics?.totalSpent || 0) / (analytics?.averageTransaction || 1) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(((analytics?.totalSpent || 0) / (analytics?.averageTransaction || 1) * 100), 100)}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                    />
-                  </div>
-                </div>
+      {/* Financial Health Overview */}
+      <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+        <motion.div
+          className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+          initial={false}
+        />
+        <div className="relative">
+          <h3 className="text-xl font-medium flex items-center text-white mb-6">
+            <LineChart className="w-5 h-5 text-[#00C805] mr-2" />
+            Financial Health Overview
+            <span className="text-[#00C805] ml-2">✨</span>
+          </h3>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-zinc-400">Category Diversity</span>
-                    <span className="text-sm font-medium text-white">
-                      {Math.min(((analytics?.transactionCount || 0) / 10 * 100), 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(((analytics?.transactionCount || 0) / 10 * 100), 100)}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                    />
-                  </div>
-                </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-zinc-400">Spending Ratio</span>
+                <span className="text-white">{(spendingData.spending_ratio * 100).toFixed(1)}%</span>
               </div>
+              <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${spendingData.spending_ratio * 100}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </div>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-black/50 rounded-lg backdrop-blur-xl">
-                  <h4 className="text-sm font-medium mb-2 text-white">Quick Tips 💡</h4>
-                  <ul className="text-sm text-zinc-400 space-y-2">
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      {spendingStatus.trend === "up" 
-                        ? <span className="text-red-400">Consider reviewing your discretionary spending</span>
-                        : <span className="text-[#00C805]">Great job maintaining your spending habits!</span>}
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      {analytics?.transactionCount && analytics.transactionCount < 5
-                        ? <span className="text-yellow-400">Try diversifying your spending categories</span>
-                        : <span className="text-[#00C805]">Good category distribution!</span>}
-                    </li>
-                  </ul>
-                </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-zinc-400">Category Diversity</span>
+                <span className="text-white">{(spendingData.category_diversity * 100).toFixed(1)}%</span>
+              </div>
+              <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${spendingData.category_diversity * 100}%` }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                />
               </div>
             </div>
           </div>
-        </Card>
-      </motion.div>
+
+          {/* Quick Tips */}
+          <div className="mt-6">
+            <h4 className="text-white font-medium mb-3 flex items-center">
+              Quick Tips 💡
+            </h4>
+            <ul className="space-y-2">
+              {spendingData.tips.map((tip, index) => (
+                <li key={index} className="text-[#00C805]">• {tip}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 };

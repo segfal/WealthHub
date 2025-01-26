@@ -2,29 +2,41 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "./ui/card";
 import { AlertTriangle, Receipt, Calendar, Loader2, DollarSign, PieChart } from "lucide-react";
-import { getBillsIncomeAnalysis } from "../lib/api";
+import { getBillsOverview, getMonthlyIncome } from "../lib/api";
 
-interface BillAnalysis {
+interface BillTransaction {
+  transaction_id: string;
+  account_id: string;
+  date: string;
+  amount: number;
+  category: string;
+  merchant: string;
+  location: string;
+}
+
+interface ProcessedBill {
   merchant: string;
   amount: number;
   percentage: number;
   date: string;
+  nextDueDate?: string;
+  isRecurring: boolean;
 }
 
-interface AnalysisResponse {
+interface AnalysisData {
   monthlyIncome: number;
   totalBills: number;
   billsToIncomeRatio: number;
   remainingIncome: number;
   remainingIncomePercentage: number;
-  bills: BillAnalysis[];
+  bills: ProcessedBill[];
   year: number;
   month: number;
   monthName: string;
 }
 
 const BillsOverview = () => {
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,22 +47,74 @@ const BillsOverview = () => {
       setLoading(false);
       return;
     }
-    // TODO : 
-      setLoading(true);
-      getBillsIncomeAnalysis(accountId)
-        .then((data: AnalysisResponse) => { 
-          setAnalysis(data); 
-          setError(null);
-        }) 
-        .catch(err => { 
-          console.error('YOU FOOL, YOU NOT GETTING ANY DATA')
-          setError(err.message)
-        })
-        .finally(() => setLoading(false));
-      }, []);
 
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
 
+    setLoading(true);
     
+    // Fetch both bills and income data
+    Promise.all([
+      getBillsOverview(accountId),
+      getMonthlyIncome(accountId, year, month)
+    ])
+      .then(([billsData, incomeData]) => {
+        // Process bills data
+        const monthlyIncome = Array.isArray(incomeData) ? 
+          incomeData.reduce((sum, t) => sum + Math.abs(t.amount), 0) : 0;
+
+        const totalBills = billsData.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        const billsToIncomeRatio = monthlyIncome > 0 ? (totalBills / monthlyIncome) * 100 : 0;
+        
+        // Group bills by merchant and calculate totals
+        const billsByMerchant = new Map<string, ProcessedBill>();
+        billsData.forEach(bill => {
+          const existing = billsByMerchant.get(bill.merchant);
+          if (existing) {
+            existing.amount += Math.abs(bill.amount);
+            if (new Date(bill.date) > new Date(existing.date)) {
+              existing.date = bill.date;
+            }
+          } else {
+            billsByMerchant.set(bill.merchant, {
+              merchant: bill.merchant,
+              amount: Math.abs(bill.amount),
+              percentage: 0, // Will calculate after
+              date: bill.date,
+              isRecurring: true, // Assuming all bills are recurring for now
+              nextDueDate: new Date(bill.date).toISOString() // You might want to calculate this differently
+            });
+          }
+        });
+
+        // Calculate percentages
+        const processedBills = Array.from(billsByMerchant.values()).map(bill => ({
+          ...bill,
+          percentage: monthlyIncome > 0 ? (bill.amount / monthlyIncome) * 100 : 0
+        }));
+
+        const analysisData: AnalysisData = {
+          monthlyIncome,
+          totalBills,
+          billsToIncomeRatio,
+          remainingIncome: monthlyIncome - totalBills,
+          remainingIncomePercentage: 100 - billsToIncomeRatio,
+          bills: processedBills,
+          year,
+          month,
+          monthName: new Date(year, month - 1).toLocaleString('default', { month: 'long' })
+        };
+
+        setAnalysis(analysisData);
+        setError(null);
+      })
+      .catch(err => {
+        console.error('Error fetching bills analysis:', err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading) {
     return (
@@ -197,7 +261,10 @@ const BillsOverview = () => {
                       <h4 className="font-medium text-white">{bill.merchant}</h4>
                       <div className="flex items-center text-sm text-zinc-400 mt-1">
                         <Calendar className="w-4 h-4 mr-1" />
-                        <span>Last paid: {bill.date}</span>
+                        <span>Last paid: {new Date(bill.date).toLocaleDateString()}</span>
+                        {bill.nextDueDate && (
+                          <span className="ml-2">Next due: {new Date(bill.nextDueDate).toLocaleDateString()}</span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">

@@ -60,9 +60,16 @@ interface UserData {
   account_name: string;
   account_type: string;
   account_number: string;
-  balance_current: number;
-  balance_available: number;
-  balance_currency: string;
+  balance: {
+    current: number;
+    available: number;
+    currency: string;
+  };
+  bank_details: {
+    bank_name: string;
+    routing_number: string;
+    branch: string;
+  };
   owner_name: string;
 }
 
@@ -83,6 +90,9 @@ const Homepage = () => {
     setLoading(true);
     getUser(accountId)
       .then(data => {
+        if (!data || !data.balance || typeof data.balance.current === 'undefined') {
+          throw new Error('Invalid user data format');
+        }
         setUser(data);
         setError(null);
       })
@@ -147,25 +157,24 @@ const Homepage = () => {
   }
 
   const getBalanceChangeIndicator = () => {
-    if (user?.balance_current !== undefined && user?.balance_available !== undefined) {
-      const difference = user.balance_current - user.balance_available;
-      const percentageChange = (difference / user.balance_available * 100).toFixed(1);
-      const isPositive = Number(percentageChange) >= 0;
-      
-      return (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className={`flex items-center space-x-1 ${isPositive ? 'text-[#00C805]' : 'text-red-500'}`}
-        >
-          {isPositive ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          <span className="text-sm font-medium">
-            ${Math.abs(difference).toFixed(2)} ({percentageChange}%)
-          </span>
-        </motion.div>
-      );
-    }
-    return null;
+    if (!user?.balance) return null;
+    
+    const difference = user.balance.current - user.balance.available;
+    const percentageChange = (difference / user.balance.available * 100);
+    const isPositive = percentageChange >= 0;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className={`flex items-center space-x-1 ${isPositive ? 'text-[#00C805]' : 'text-red-500'}`}
+      >
+        {isPositive ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <span className="text-sm font-medium">
+          ${Math.abs(difference).toFixed(2)} ({percentageChange.toFixed(1)}%)
+        </span>
+      </motion.div>
+    );
   };
 
   const tabIcons = {
@@ -208,7 +217,7 @@ const Homepage = () => {
                 }}
               />
               <h1 className="text-5xl font-bold bg-gradient-to-r from-[#00C805] to-emerald-500 bg-clip-text text-transparent relative">
-                Welcome back, {user.owner_name}
+                Welcome back, {user?.owner_name || 'User'}
                 <motion.span
                   className="absolute -top-6 -right-6"
                   animate={{
@@ -247,7 +256,7 @@ const Homepage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  ${user?.balance_current?.toFixed(2) || '0.00'}
+                  ${user?.balance?.current?.toFixed(2) || '0.00'}
                 </motion.p>
                 {getBalanceChangeIndicator()}
               </div>
@@ -291,7 +300,7 @@ const Homepage = () => {
                 <div>
                   <p className="text-zinc-400 text-sm font-medium">Available Balance</p>
                   <p className="text-3xl font-bold mt-2 text-white">
-                    ${user?.balance_available?.toFixed(2) || '0.00'}
+                    ${user?.balance?.available?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl">
@@ -313,7 +322,7 @@ const Homepage = () => {
                 <div>
                   <p className="text-zinc-400 text-sm font-medium">Current Balance</p>
                   <p className="text-3xl font-bold mt-2 text-white">
-                    ${user?.balance_current?.toFixed(2) || '0.00'}
+                    ${user?.balance?.current?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl">

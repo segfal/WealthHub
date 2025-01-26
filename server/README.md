@@ -1,536 +1,337 @@
-# FinanceBros - Financial Analytics Backend
+# FinanceBros Backend
 
-A sophisticated financial analytics backend that analyzes spending patterns, predicts future expenses, and provides insights into financial behavior.
+This is the backend server for FinanceBros, a financial analytics and management platform. The server is built using Go and follows a clean architecture pattern.
 
 ## Project Structure
 
 ```
 server/
-├── analytics/              # Analytics domain package
-│   ├── handlers.go        # HTTP request handlers
-│   ├── postgres.go        # PostgreSQL repository implementation
-│   ├── repository.go      # Repository interface
-│   └── service.go         # Business logic and analytics calculations
-├── cmd/                   # Command-line applications
-│   └── setup_db/         # Database setup utility
-│       └── main.go       # Database initialization
-├── crud/                  # Basic CRUD operations
-│   └── crud.go           # Database operations
-├── types/                 # Shared type definitions
-│   ├── analytics.go      # Analytics-related types
-│   └── transaction.go    # Transaction-related types
-├── main.go               # Server entry point
-└── README.md             # This documentation
+├── analytics/           # Analytics feature package
+│   ├── handler/        # HTTP handlers for analytics endpoints
+│   ├── service/        # Business logic for analytics
+│   └── repository/     # Data access layer for analytics
+├── bills/              # Bills management feature package
+│   ├── handler/        # HTTP handlers for bills endpoints
+│   ├── service/        # Business logic for bills
+│   └── repository/     # Data access layer for bills
+├── categories/         # Categories feature package
+│   ├── handler/        # HTTP handlers for categories endpoints
+│   ├── service/        # Business logic for categories
+│   └── repository/     # Data access layer for categories
+├── income/             # Income tracking feature package
+│   ├── handler/        # HTTP handlers for income endpoints
+│   ├── service/        # Business logic for income
+│   └── repository/     # Data access layer for income
+├── types/              # Shared type definitions
+├── handlers/           # Main route configuration
+├── crud/              # Basic CRUD operations
+└── main.go            # Application entry point
 ```
 
-## Analytics System
+## API Endpoints
 
-### System Design
-```mermaid
-graph TD
-    Client[Client] --> |HTTP Request| Router[HTTP Router]
-    Router --> |GET /api/analytics| AH[Analytics Handler]
-    Router --> |GET /api/patterns| PH[Patterns Handler]
-    Router --> |GET /api/predictions| FH[Future Predictions Handler]
-    
-    AH --> |Service Call| AS[Analytics Service]
-    PH --> |Service Call| AS
-    FH --> |Service Call| AS
-    
-    AS --> |Repository Call| AR[Analytics Repository]
-    AR --> |SQL Query| DB[(PostgreSQL)]
-    
-    subgraph "Analytics Domain"
-        AS --> |Time Pattern Analysis| TPA[Time Pattern Analyzer]
-        AS --> |Spending Prediction| SP[Spending Predictor]
-        AS --> |Category Analysis| CA[Category Analyzer]
-    end
-```
+### User Endpoints
+- `GET /api/user/{accountId}`
+  - Example: `http://localhost:8080/api/user/1234567891`
+  - Returns user information and account details
 
-### Analytics Components
+### Analytics Endpoints
+- `GET /api/analytics/{accountId}`
+  - Example: `http://localhost:8080/api/analytics/1234567891`
+  - Returns spending analytics for the account
+- `GET /api/predictions/{accountId}`
+  - Example: `http://localhost:8080/api/predictions/1234567891`
+  - Returns spending predictions
+- `GET /api/patterns/{accountId}`
+  - Example: `http://localhost:8080/api/patterns/1234567891`
+  - Returns time-based spending patterns
+- `GET /api/insights/{accountId}`
+  - Example: `http://localhost:8080/api/insights/1234567891`
+  - Returns spending insights and recommendations
 
-1. **Time Pattern Analysis** ([analytics/service.go](analytics/service.go))
-   - Groups transactions by day of week and hour
-   - Calculates frequency and average spend for each time slot
-   - Implementation details:
-     ```go
-     // Key function: AnalyzeTimePatterns
-     func (s *service) AnalyzeTimePatterns(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.TimePattern, error) {
-         // Retrieves transactions and groups them by day and hour
-         // Calculates frequency and average spend
-     }
-     ```
-   - Mathematical model for average spend calculation:
-     \[ A_{spend}(d,h) = \frac{\sum_{t \in T_{d,h}} |amount(t)|}{|T_{d,h}|} \]
-     where:
-     - \(A_{spend}(d,h)\) is the average spend for day \(d\) and hour \(h\)
-     - \(T_{d,h}\) is the set of transactions at day \(d\) and hour \(h\)
-     - \(|amount(t)|\) is the absolute value of transaction amount
-   - SQL Query Used:
-     ```sql
-     SELECT transaction_id, account_id, date, amount, category, merchant, location
-     FROM transactions 
-     WHERE account_id = $1 
-       AND date >= NOW() - $2::INTERVAL
-     ORDER BY date DESC
-     ```
+### Bills Endpoints
+- `GET /api/bills/{accountId}`
+  - Example: `http://localhost:8080/api/bills/1234567891`
+  - Returns all bill payments
+- `GET /api/bills/{accountId}/recurring`
+  - Example: `http://localhost:8080/api/bills/1234567891/recurring`
+  - Returns recurring bill payments
+- `GET /api/bills/{accountId}/upcoming`
+  - Example: `http://localhost:8080/api/bills/1234567891/upcoming`
+  - Returns upcoming bill payments
+- `GET /api/bills/{accountId}/history/{merchant}`
+  - Example: `http://localhost:8080/api/bills/1234567891/history/Netflix`
+  - Returns bill payment history for a specific merchant
 
-2. **Spending Prediction** ([analytics/service.go](analytics/service.go))
-   - Uses 6-month historical data for predictions
-   - Calculates likelihood scores based on frequency and amount
-   - Implementation details:
-     ```go
-     // Key function: PredictFutureSpending
-     func (s *service) PredictFutureSpending(ctx context.Context, accountID string) ([]types.PredictedSpend, error) {
-         // Analyzes 6-month transaction history
-         // Calculates spending patterns and likelihood scores
-     }
-     ```
-   - Mathematical models:
-     \[ frequency_{norm} = min(\frac{n_{transactions}}{180} \times 30, 1.0) \]
-     \[ amount_{norm} = min(\frac{avg\_amount}{1000}, 1.0) \]
-     \[ likelihood = \frac{frequency_{norm} + amount_{norm}}{2} \]
-     where:
-     - \(n_{transactions}\) is the number of transactions in 6 months
-     - \(avg\_amount\) is the average transaction amount
-     - Normalization factors: 180 days (6 months), 30 days (monthly), \$1000 (amount threshold)
-   - Prediction Algorithm Steps:
-     1. Group transactions by category
-     2. Calculate average time between transactions
-     3. Determine spending frequency
-     4. Normalize amounts and frequencies
-     5. Calculate likelihood scores
-     6. Generate warnings for high-likelihood events
+### Categories Endpoints
+- `GET /api/categories/{accountId}`
+  - Example: `http://localhost:8080/api/categories/1234567891`
+  - Returns all spending categories
+- `GET /api/categories/{accountId}/totals`
+  - Example: `http://localhost:8080/api/categories/1234567891/totals`
+  - Returns total spending by category
 
-3. **Category Analysis** ([analytics/service.go](analytics/service.go))
-   - Aggregates spending by category
-   - Calculates percentage distribution
-   - Implementation details:
-     ```go
-     // Key function: GetSpendingAnalytics
-     func (s *service) GetSpendingAnalytics(ctx context.Context, accountID string, timeRange string) (*types.SpendingAnalytics, error) {
-         // Retrieves category totals and calculates percentages
-     }
-     ```
-   - Mathematical model:
-     \[ category\_percentage = \frac{total\_amount\_in\_category}{total\_amount\_all\_categories} \times 100 \]
-   - SQL Query Used:
-     ```sql
-     SELECT category, COALESCE(SUM(ABS(amount)), 0) as total
-     FROM transactions 
-     WHERE account_id = $1 
-       AND date >= NOW() - $2::INTERVAL
-     GROUP BY category
-     ORDER BY total DESC
-     ```
+### Income Endpoints
+- `GET /api/income/{accountId}`
+  - Example: `http://localhost:8080/api/income/1234567891`
+  - Returns all income transactions
+- `GET /api/income/{accountId}/monthly`
+  - Example: `http://localhost:8080/api/income/1234567891/monthly?year=2024&month=3`
+  - Returns monthly income data
 
-### Implementation Details
+## Setup
 
-1. **Repository Layer** ([analytics/repository.go](analytics/repository.go), [analytics/postgres.go](analytics/postgres.go))
-   ```mermaid
-   classDiagram
-       class Repository {
-           <<interface>>
-           +GetTransactions(ctx, accountID, timeRange) []Transaction
-           +GetCategoryTotals(ctx, accountID, timeRange) map[string]float64
-       }
-       class PostgresRepo {
-           -db *sql.DB
-           +GetTransactions(ctx, accountID, timeRange) []Transaction
-           +GetCategoryTotals(ctx, accountID, timeRange) map[string]float64
-       }
-       Repository <|.. PostgresRepo
-   ```
-   - Interface definition:
-     ```go
-     type Repository interface {
-         GetTransactions(ctx context.Context, accountID string, timeRange string) ([]types.Transaction, error)
-         GetCategoryTotals(ctx context.Context, accountID string, timeRange string) (map[string]float64, error)
-     }
-     ```
-   - PostgreSQL implementation uses parameterized queries to prevent SQL injection
-   - Handles connection pooling and transaction management
-
-2. **Service Layer** ([analytics/service.go](analytics/service.go))
-   ```mermaid
-   classDiagram
-       class Service {
-           <<interface>>
-           +GetSpendingAnalytics(ctx, accountID, timeRange) *SpendingAnalytics
-           +AnalyzeTimePatterns(ctx, accountID, startDate, endDate) []TimePattern
-           +PredictFutureSpending(ctx, accountID) []PredictedSpend
-       }
-       class AnalyticsService {
-           -repo Repository
-           +GetSpendingAnalytics(ctx, accountID, timeRange) *SpendingAnalytics
-           +AnalyzeTimePatterns(ctx, accountID, startDate, endDate) []TimePattern
-           +PredictFutureSpending(ctx, accountID) []PredictedSpend
-       }
-       Service <|.. AnalyticsService
-   ```
-   - Business logic implementation
-   - Error handling and validation
-   - Data transformation and analytics calculations
-
-3. **Handler Layer** ([analytics/handlers.go](analytics/handlers.go))
-   ```mermaid
-   classDiagram
-       class Handler {
-           -service Service
-           +RegisterRoutes(mux *http.ServeMux)
-           -handleAnalytics(w http.ResponseWriter, r *http.Request)
-           -handlePatterns(w http.ResponseWriter, r *http.Request)
-           -handlePredictions(w http.ResponseWriter, r *http.Request)
-       }
-   ```
-   - HTTP request handling
-   - Input validation
-   - Response formatting
-   - Error response handling
-
-### Data Types ([types/analytics.go](types/analytics.go))
-
-1. **SpendingAnalytics**
-   ```go
-   type SpendingAnalytics struct {
-       TopCategories     []CategorySpend   `json:"topCategories"`
-       SpendingPatterns  []TimePattern     `json:"spendingPatterns"`
-       PredictedSpending []PredictedSpend  `json:"predictedSpending"`
-       TotalSpent        float64           `json:"totalSpent"`
-       MonthlyAverage    float64           `json:"monthlyAverage"`
-   }
-   ```
-
-2. **TimePattern**
-   ```go
-   type TimePattern struct {
-       TimeOfDay    string  `json:"timeOfDay"`
-       DayOfWeek    string  `json:"dayOfWeek"`
-       Frequency    int     `json:"frequency"`
-       AverageSpend float64 `json:"averageSpend"`
-   }
-   ```
-
-3. **PredictedSpend**
-   ```go
-   type PredictedSpend struct {
-       Category      string    `json:"category"`
-       Likelihood    float64   `json:"likelihood"`
-       PredictedDate time.Time `json:"predictedDate"`
-       Warning       string    `json:"warning,omitempty"`
-   }
-   ```
-
-### API Endpoints and Examples
-
-1. **GET /api/analytics/{accountId}**
-   - File: [analytics/handlers.go](analytics/handlers.go)
-   - Handler: `handleAnalytics`
-   - Example Request:
-     ```bash
-     curl "http://localhost:8080/api/analytics/1234567891?timeRange=1%20month"
-     ```
-   - Example Response:
-     ```json
-     {
-       "topCategories": [
-         {
-           "category": "Groceries",
-           "totalSpent": "543.21",
-           "percentage": "32.5"
-         }
-       ],
-       "spendingPatterns": [
-         {
-           "timeOfDay": "18:00",
-           "dayOfWeek": "Friday",
-           "frequency": 12,
-           "averageSpend": 45.67
-         }
-       ],
-       "predictedSpending": [
-         {
-           "category": "Groceries",
-           "likelihood": 0.85,
-           "predictedDate": "2024-02-01T18:00:00Z",
-           "warning": "High likelihood (85%) of spending in Groceries category around Feb 01"
-         }
-       ],
-       "totalSpent": 1672.43,
-       "monthlyAverage": 1672.43
-     }
-     ```
-
-2. **GET /api/patterns/{accountId}**
-   - File: [analytics/handlers.go](analytics/handlers.go)
-   - Handler: `handlePatterns`
-   - Example Request:
-     ```bash
-     curl "http://localhost:8080/api/patterns/1234567891?start=2024-01-01&end=2024-02-01"
-     ```
-   - Example Response:
-     ```json
-     [
-       {
-         "timeOfDay": "12:00",
-         "dayOfWeek": "Monday",
-         "frequency": 8,
-         "averageSpend": 25.50
-       }
-     ]
-     ```
-
-3. **GET /api/predictions/{accountId}**
-   - File: [analytics/handlers.go](analytics/handlers.go)
-   - Handler: `handlePredictions`
-   - Example Request:
-     ```bash
-     curl "http://localhost:8080/api/predictions/1234567891"
-     ```
-   - Example Response:
-     ```json
-     [
-       {
-         "category": "Dining",
-         "likelihood": 0.75,
-         "predictedDate": "2024-02-03T19:00:00Z",
-         "warning": "High likelihood (75%) of spending in Dining category around Feb 03"
-       }
-     ]
-     ```
-
-### Error Handling
-
-The API uses standard HTTP status codes with detailed error messages:
-
-1. **400 Bad Request**
-   ```json
-   {
-     "error": "Invalid account ID format"
-   }
-   ```
-
-2. **404 Not Found**
-   ```json
-   {
-     "error": "Account not found: 1234567891"
-   }
-   ```
-
-3. **500 Internal Server Error**
-   ```json
-   {
-     "error": "Failed to query database: connection refused"
-   }
-   ```
-
-Implementation ([analytics/handlers.go](analytics/handlers.go)):
-```go
-func handleError(w http.ResponseWriter, err error, status int) {
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    json.NewEncoder(w).Encode(map[string]string{
-        "error": err.Error(),
-    })
-}
-```
-
-### Security Considerations
-
-1. **Environment Variables** ([.env.example](.env.example))
-   ```env
-   DB_URL=postgresql://postgres:password@host:port/dbname
-   DB_NAME=dbname
-   DB_USER=username
-   DB_PASSWORD=password
-   DB_HOST=host
-   DB_PORT=port
-   PORT=8080
-   ```
-
-2. **SQL Injection Prevention** ([analytics/postgres.go](analytics/postgres.go))
-   ```go
-   // Using parameterized queries
-   rows, err := r.db.QueryContext(ctx, query, accountID, timeRange)
-   ```
-
-3. **Input Validation** ([analytics/handlers.go](analytics/handlers.go))
-   ```go
-   // Validate account ID format
-   if !validateAccountID(accountID) {
-       handleError(w, errors.New("invalid account ID format"), http.StatusBadRequest)
-       return
-   }
-   ```
-
-4. **CORS Configuration** ([main.go](main.go))
-   ```go
-   // CORS middleware setup
-   w.Header().Set("Access-Control-Allow-Origin", "*")
-   w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-   w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-   ```
-
-### Performance Optimization
-
-1. **Database Indexing**
-   ```sql
-   CREATE INDEX idx_transactions_account_date ON transactions(account_id, date);
-   CREATE INDEX idx_transactions_category ON transactions(category);
-   ```
-
-2. **Connection Pooling**
-   ```go
-   // Database configuration
-   db.SetMaxOpenConns(25)
-   db.SetMaxIdleConns(25)
-   db.SetConnMaxLifetime(5 * time.Minute)
-   ```
-
-3. **Query Optimization**
-   - Using appropriate indexes
-   - Limiting result sets
-   - Efficient joins and aggregations
-
-4. **Caching Strategy**
-   - In-memory caching for frequently accessed data
-   - Cache invalidation on data updates
-   - Configurable cache duration
-
-## Testing
-
-### Unit Tests
-Location: [analytics/service_test.go](analytics/service_test.go)
-```go
-func TestAnalyzeTimePatterns(t *testing.T) {
-    // Test cases for time pattern analysis
-}
-
-func TestPredictFutureSpending(t *testing.T) {
-    // Test cases for spending predictions
-}
-```
-
-### Integration Tests
-Location: [analytics/integration_test.go](analytics/integration_test.go)
-```go
-func TestAnalyticsEndToEnd(t *testing.T) {
-    // End-to-end test cases
-}
-```
-
-### Load Tests
-Location: [tests/load/main.go](tests/load/main.go)
-```go
-func BenchmarkAnalyticsEndpoint(b *testing.B) {
-    // Load test implementation
-}
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details 
-
-## Build Instructions
-
-### Prerequisites
-- Go 1.21 or higher
-- PostgreSQL 14 or higher
-- Git
-
-### Environment Setup
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/FinanceBros.git
-cd FinanceBros/server
-```
-
-2. Create a `.env` file in the server directory:
-```bash
-DB_URL=postgresql://postgres:password@localhost:5432/financebros
-DB_NAME=financebros
-DB_USER=postgres
-DB_PASSWORD=password
-DB_HOST=localhost
-DB_PORT=5432
+1. Create a `.env` file in the server directory with:
+```env
+DB_URL=postgres://username:password@localhost:5432/dbname
 PORT=8080
 ```
 
-3. Install Go dependencies:
+2. Install dependencies:
 ```bash
 go mod download
 ```
 
-### Database Setup
-1. Create a PostgreSQL database:
-```bash
-createdb financebros
-```
-
-2. Initialize the database with sample data:
-```bash
-go run cmd/setup_db/main.go
-```
-This will:
-- Create necessary tables
-- Insert sample data for Jane, John, Jill, and Jake Doe
-- Each user will have their transactions loaded from their respective JSON files
-
-### Running Tests
-To verify the database setup and transaction handling:
-```bash
-go run cmd/test_transactions/main.go
-```
-This will display sample transactions for each user, confirming:
-- Proper transaction ID prefixing
-- Correct data loading
-- Transaction retrieval functionality
-
-### Running the Server
-Start the server with:
+3. Run the server:
 ```bash
 go run main.go
 ```
-The server will start on port 8080 (or the port specified in your .env file).
 
-### API Endpoints
-- `GET /api/transactions/:accountId` - Get all transactions for an account
-- `POST /api/transactions` - Create a new transaction
-- `GET /api/analytics/:accountId` - Get spending analytics for an account
+## Architecture
 
-### Data Structure
-The database consists of two main tables:
-1. `users` - Stores user account information
-   - Primary key: `account_id`
-   - Contains: account details, balance information, bank details
+The project follows a clean architecture pattern with the following layers:
 
-2. `transactions` - Stores transaction records
-   - Primary key: `transaction_id` (prefixed with user identifier)
-   - Foreign key: `account_id` references users(account_id)
-   - Contains: transaction details, amount, category, etc.
+1. **Handler Layer** (`handler/`)
+   - Handles HTTP requests and responses
+   - Input validation and response formatting
+   - Routes definition
 
-### Transaction ID Format
-Transactions are stored with prefixed IDs to ensure uniqueness:
-- Format: `{userprefix}_{transactionid}`
-- Example: `jane_TXN00123`
+2. **Service Layer** (`service/`)
+   - Business logic implementation
+   - Data processing and analysis
+   - No direct database access
 
-This allows:
-- Multiple users to have transactions with the same base ID
-- Easy filtering by user
-- Original transaction ID preservation
+3. **Repository Layer** (`repository/`)
+   - Data access layer
+   - Database queries and operations
+   - Data persistence logic
 
-### Development Notes
-- Transaction IDs are automatically prefixed with the user identifier during insertion
-- The system handles duplicate transaction IDs across users
-- Batch processing is implemented for efficient data loading
-- Error handling includes graceful handling of duplicates 
+Each feature (analytics, bills, categories, income) follows this layered architecture for better organization and maintainability.
+
+## Database Schema
+
+The application uses PostgreSQL with the following main tables:
+
+1. **users**
+   - account_id (primary key)
+   - account_name
+   - account_type
+   - account_number
+   - balance_current
+   - balance_available
+   - balance_currency
+   - owner_name
+
+2. **transactions**
+   - transaction_id (primary key)
+   - account_id (foreign key)
+   - date
+   - amount
+   - category
+   - merchant
+   - location
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+- 200: Success
+- 400: Bad Request
+- 404: Not Found
+- 500: Internal Server Error
+
+All endpoints return JSON responses with appropriate error messages when applicable.
+
+## Security
+
+- CORS is enabled for development with appropriate middleware
+- Panic recovery middleware is implemented
+- Request logging for debugging and monitoring
+- Environment variables for sensitive configuration
+
+## Development Guide
+
+### Adding a New Feature
+
+When adding a new feature, follow these steps in order for optimal development flow:
+
+1. **Define Types** (Start here)
+   ```go
+   // types/prediction.go
+   package types
+
+   type PredictionRequest struct {
+       AccountID string `json:"account_id"`
+       TimeRange string `json:"time_range"`
+   }
+
+   type PredictionResult struct {
+       Category    string    `json:"category"`
+       Likelihood  float64   `json:"likelihood"`
+       NextDate    time.Time `json:"next_date"`
+   }
+   ```
+
+2. **Repository Layer** (Build data access first)
+   ```go
+   // analytics/repository/repository.go
+   type Repository interface {
+       // Add new method to interface
+       GetPredictionData(ctx context.Context, accountID string) ([]types.Transaction, error)
+   }
+
+   // analytics/repository/postgres.go
+   func (r *postgresRepo) GetPredictionData(ctx context.Context, accountID string) ([]types.Transaction, error) {
+       // Implement database query
+       query := `SELECT ... FROM transactions WHERE ...`
+       // Execute query and return results
+   }
+   ```
+
+3. **Service Layer** (Implement business logic)
+   ```go
+   // analytics/service/service.go
+   type Service interface {
+       // Add new method to interface
+       GeneratePredictions(ctx context.Context, req types.PredictionRequest) ([]types.PredictionResult, error)
+   }
+
+   func (s *service) GeneratePredictions(ctx context.Context, req types.PredictionRequest) ([]types.PredictionResult, error) {
+       // Get data from repository
+       data, err := s.repo.GetPredictionData(ctx, req.AccountID)
+       if err != nil {
+           return nil, err
+       }
+
+       // Implement prediction logic
+       var predictions []types.PredictionResult
+       // Process data and generate predictions
+       return predictions, nil
+   }
+   ```
+
+4. **Handler Layer** (Add API endpoint last)
+   ```go
+   // analytics/handler/handler.go
+   func (h *Handler) RegisterRoutes(router *mux.Router) {
+       // Add new route
+       router.HandleFunc("/api/predictions/{accountId}", h.HandlePredictions).Methods("GET")
+   }
+
+   func (h *Handler) HandlePredictions(w http.ResponseWriter, r *http.Request) {
+       // Extract parameters
+       vars := mux.Vars(r)
+       accountID := vars["accountId"]
+
+       // Create request
+       req := types.PredictionRequest{
+           AccountID: accountID,
+           TimeRange: r.URL.Query().Get("timeRange"),
+       }
+
+       // Call service
+       predictions, err := h.service.GeneratePredictions(r.Context(), req)
+       if err != nil {
+           http.Error(w, err.Error(), http.StatusInternalServerError)
+           return
+       }
+
+       // Return response
+       w.Header().Set("Content-Type", "application/json")
+       json.NewEncoder(w).Encode(predictions)
+   }
+   ```
+
+### Development Best Practices
+
+1. **Order of Development**
+   - Types → Repository → Service → Handler
+   - This order ensures dependencies are available when needed
+   - Allows for easier testing and mocking
+
+2. **Testing Strategy**
+   ```go
+   // Start with repository tests
+   func TestGetPredictionData(t *testing.T) {
+       // Test database queries
+   }
+
+   // Then service tests
+   func TestGeneratePredictions(t *testing.T) {
+       // Test business logic with mocked repository
+   }
+
+   // Finally handler tests
+   func TestHandlePredictions(t *testing.T) {
+       // Test HTTP handling with mocked service
+   }
+   ```
+
+3. **Feature Checklist**
+   - [ ] Define types and interfaces
+   - [ ] Implement repository methods
+   - [ ] Add repository tests
+   - [ ] Implement service logic
+   - [ ] Add service tests
+   - [ ] Create HTTP handler
+   - [ ] Add handler tests
+   - [ ] Update API documentation
+   - [ ] Add logging and error handling
+
+4. **Code Organization**
+   ```
+   feature/
+   ├── types/
+   │   └── feature.go         # Type definitions
+   ├── repository/
+   │   ├── repository.go      # Interface definition
+   │   ├── postgres.go        # Implementation
+   │   └── postgres_test.go   # Tests
+   ├── service/
+   │   ├── service.go         # Business logic
+   │   └── service_test.go    # Tests
+   └── handler/
+       ├── handler.go         # HTTP handling
+       └── handler_test.go    # Tests
+   ```
+
+5. **Error Handling Pattern**
+   ```go
+   // Repository layer - return specific errors
+   if err != nil {
+       return nil, fmt.Errorf("failed to query predictions: %w", err)
+   }
+
+   // Service layer - add context
+   if err != nil {
+       return nil, fmt.Errorf("failed to generate predictions: %w", err)
+   }
+
+   // Handler layer - convert to HTTP errors
+   if err != nil {
+       log.Printf("Error generating predictions: %v", err)
+       http.Error(w, "Failed to generate predictions", http.StatusInternalServerError)
+       return
+   }
+   ```
+
+6. **Logging Pattern**
+   ```go
+   // Add context-rich logs at each layer
+   log.Printf("Generating predictions for account %s with timeRange %s", 
+       accountID, timeRange)
+
+   // Log important operations and errors
+   if err != nil {
+       log.Printf("Failed to generate predictions: %v", err)
+   }
+   ```

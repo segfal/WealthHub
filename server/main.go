@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"server/analytics"
+	analyticsHandler "server/analytics/handler"
+	analyticsRepo "server/analytics/repository"
+	analyticsService "server/analytics/service"
 	"server/handlers"
 	"time"
 
@@ -56,7 +58,7 @@ func main() {
 
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("Warning: Error loading .env file: %v", err)
 	}
 
 	// Get database URL from environment
@@ -79,9 +81,9 @@ func main() {
 	log.Printf("Successfully connected to database")
 
 	// Initialize repositories and services
-	analyticsRepo := analytics.NewPostgresRepository(db)
-	analyticsService := analytics.NewService(analyticsRepo)
-	analyticsHandler := analytics.NewHandler(analyticsService)
+	repo := analyticsRepo.NewPostgresRepository(db)
+	service := analyticsService.NewService(repo)
+	analyticsH := analyticsHandler.NewHandler(service)
 
 	// Set up router with middleware
 	router := mux.NewRouter()
@@ -89,7 +91,7 @@ func main() {
 
 	// Register all routes
 	handlers.SetupRoutes(router, db)
-	analyticsHandler.RegisterRoutes(router)
+	analyticsH.RegisterRoutes(router)
 
 	// Set up CORS
 	corsMiddleware := gorilla_handlers.CORS(
@@ -113,7 +115,7 @@ func main() {
 	})
 
 	// Create final handler chain
-	handler := corsMiddleware(recoveryHandler)
+	finalHandler := corsMiddleware(recoveryHandler)
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -122,7 +124,7 @@ func main() {
 	}
 	
 	log.Printf("Server listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
+	if err := http.ListenAndServe(":"+port, finalHandler); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }
