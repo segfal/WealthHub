@@ -7,6 +7,7 @@ import (
 	"log"
 	"server/types"
 	"strings"
+	"time"
 )
 
 type postgresRepo struct {
@@ -198,6 +199,10 @@ func GetDaysInMonth(year, month int) int {
 	return MonthDays[month]
 }
 
+func getPast30Days(year, month, day int) string {
+	return fmt.Sprintf("%d-%02d-%02d 00:00:00", year, month, day-30)
+}
+
 // GetMonthlyIncome retrieves income transactions for a specific month
 func (r *postgresRepo) GetMonthlyIncome(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
 	if accountID == "" {
@@ -301,5 +306,227 @@ func (r *postgresRepo) GetBillPayments(ctx context.Context, accountID string, ye
 
 	return transactions, nil
 }
+
+
+func (r *postgresRepo) GetCategoryDiversity(ctx context.Context, accountID string, year int, month int) (map[string]int, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	daysInMonth := GetDaysInMonth(year, month)
+	startDate := fmt.Sprintf("%d-%02d-01 00:00:00", year, month)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, daysInMonth)
+
+	query := `
+		SELECT category, COUNT(*) as count
+		FROM transactions
+		WHERE account_id = $1
+		  AND date >= $2
+		  AND date <= $3
+		GROUP BY category
+		ORDER BY count DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+	if err != nil {
+		log.Printf("Error querying category diversity: %v", err)
+		return nil, fmt.Errorf("failed to query category diversity: %w", err)
+	}
+	defer rows.Close()
+
+	categoryCounts := make(map[string]int)
+	for rows.Next() {
+		var category string
+		var count int
+		if err := rows.Scan(&category, &count); err != nil {
+			log.Printf("Error scanning category count: %v", err)
+			return nil, fmt.Errorf("failed to scan category count: %w", err)
+		}
+		categoryCounts[category] = count
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating category counts: %v", err)
+		return nil, fmt.Errorf("error iterating category counts: %w", err)
+	}
+
+	log.Printf("Found %d categories for account %s", len(categoryCounts), accountID)
+	return categoryCounts, nil
+}
+
+
+func (r *postgresRepo) GetTimePatterns(ctx context.Context, accountID string, year int, month int, day int) (map[string]types.Transaction, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+	/**
+		This Function will return a list of transactions, in a week, it shows the most frequent purchase at that time of day,
+		for example if the person buys mcdonalds around 10 am everyday it will show that pattern. and alert the user that they are spending too much on mcdonalds
+		we need to get the day of the week and time of day, so basically the year and month and day will be the start date and look at the transactions for the past
+		30 days and see if there are any patterns
+		the current date will be now, so we need to get the past 30 days
+	*/
+	//get the past 30 days
+	startDate := getPast30Days(year, month, day)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, day)
+	
+
+	query := `
+		SELECT date, amount, category, merchant, location
+		FROM transactions
+		WHERE account_id = $1
+		  AND date >= $2
+		  AND date <= $3
+		ORDER BY date DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+
+	//store all the transactions in a map
+	transactions := make(map[string]types.Transaction)
+	for rows.Next() {
+		var t types.Transaction
+		if err := rows.Scan(&t.Date, &t.Amount, &t.Category, &t.Merchant, &t.Location); err != nil {
+			log.Printf("Error scanning transaction: %v", err)
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		dateKey := t.Date.Format("2006-01-02 15:04:05")  // Format time as string key
+		transactions[dateKey] = t
+	}
+	if err != nil {
+		log.Printf("Error querying time patterns: %v", err)
+		return nil, fmt.Errorf("failed to query time patterns: %w", err)
+	}
+	defer rows.Close()
+
+	return transactions, nil
+}
+
+func (r *postgresRepo) GetDailySpending(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	daysInMonth := GetDaysInMonth(year, month)
+	startDate := fmt.Sprintf("%d-%02d-01 00:00:00", year, month)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, daysInMonth)
+
+	query := `
+		SELECT transaction_id, account_id, date, amount, category, merchant, location
+		FROM transactions 
+		WHERE account_id = $1 
+		  AND date >= $2
+		  AND date <= $3
+		ORDER BY date ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query daily spending: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []types.Transaction
+	for rows.Next() {
+		var t types.Transaction
+		if err := rows.Scan(
+			&t.TransactionID,
+			&t.AccountID,
+			&t.Date,
+			&t.Amount,
+			&t.Category,
+			&t.Merchant,
+			&t.Location,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	return transactions, nil
+}
+
+func (r *postgresRepo) GetMonthlySpending(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	daysInMonth := GetDaysInMonth(year, month)
+	startDate := fmt.Sprintf("%d-%02d-01 00:00:00", year, month)
+	endDate := fmt.Sprintf("%d-%02d-%02d 23:59:59", year, month, daysInMonth)
+
+	query := `
+		SELECT transaction_id, account_id, date, amount, category, merchant, location
+		FROM transactions 
+		WHERE account_id = $1 
+		  AND date >= $2
+		  AND date <= $3
+		ORDER BY category, date ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query monthly spending: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []types.Transaction
+	for rows.Next() {
+		var t types.Transaction
+		if err := rows.Scan(
+			&t.TransactionID,
+			&t.AccountID,
+			&t.Date,
+			&t.Amount,
+			&t.Category,
+			&t.Merchant,
+			&t.Location,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	return transactions, nil
+}
+
+func (r *postgresRepo) GetRecentSpending(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.Transaction, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("account ID is required")
+	}
+
+	query := `
+		SELECT transaction_id, account_id, date, amount, category, merchant, location
+		FROM transactions 
+		WHERE account_id = $1 
+		  AND date >= $2
+		  AND date <= $3
+		ORDER BY date DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, accountID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent spending: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []types.Transaction
+	for rows.Next() {
+		var t types.Transaction
+		if err := rows.Scan(
+			&t.TransactionID,
+			&t.AccountID,
+			&t.Date,
+			&t.Amount,
+			&t.Category,
+			&t.Merchant,
+			&t.Location,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	return transactions, nil
+}
+
+
+
+
 
 

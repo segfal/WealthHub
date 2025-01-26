@@ -275,4 +275,66 @@ func (s *service) GetBillPayments(ctx context.Context, accountID string, year in
 	}
 
 	return s.repo.GetBillPayments(ctx, accountID, year, month)
+}
+
+// GetDailyPatterns implements Service.GetDailyPatterns
+func (s *service) GetDailyPatterns(ctx context.Context, accountID string, year int, month int) ([]types.DailyPattern, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
+	transactions, err := s.repo.GetDailySpending(ctx, accountID, year, month)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get daily spending: %w", err)
+	}
+
+	// Group transactions by day
+	dailyTotals := make(map[string]float64)
+	for _, tx := range transactions {
+		day := tx.Date.Format("Monday")
+		dailyTotals[day] += math.Abs(tx.Amount)
+	}
+
+	// Convert to DailyPattern slice
+	var patterns []types.DailyPattern
+	for day, total := range dailyTotals {
+		patterns = append(patterns, types.DailyPattern{
+			DayOfWeek: day,
+			AverageAmount: total,
+		})
+	}
+
+	return patterns, nil
+}
+
+// GetMonthlyPatterns implements Service.GetMonthlyPatterns
+func (s *service) GetMonthlyPatterns(ctx context.Context, accountID string, year int, month int) ([]types.MonthlyPattern, error) {
+	// First, verify the account exists
+	if _, err := s.repo.GetAccount(ctx, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
+	transactions, err := s.repo.GetMonthlySpending(ctx, accountID, year, month)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monthly spending: %w", err)
+	}
+
+	// Group transactions by month
+	monthlyTotals := make(map[string]float64)
+	for _, tx := range transactions {
+		monthName := tx.Date.Format("January")
+		monthlyTotals[monthName] += math.Abs(tx.Amount)
+	}
+
+	// Convert to MonthlyPattern slice
+	var patterns []types.MonthlyPattern
+	for month, total := range monthlyTotals {
+		patterns = append(patterns, types.MonthlyPattern{
+			Month: month,
+			AverageAmount: total,
+		})
+	}
+
+	return patterns, nil
 } 
