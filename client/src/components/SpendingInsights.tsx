@@ -288,7 +288,7 @@ const SpendingInsights = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-4">Spending Insights 🔍</h2>
+      <h2 className="text-2xl font-bold mb-4 text-white">Spending Insights 🔍</h2>
       
       <div className="grid gap-6">
         {insights.map((insight, index) => (
@@ -298,51 +298,59 @@ const SpendingInsights = () => {
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                  <span className="mr-2">{getCategoryIcon(insight.category)}</span>
+            <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+              <motion.div
+                className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+                initial={false}
+              />
+              <div className="relative">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                      {getCategoryIcon(insight.category)}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-white">{insight.category}</h3>
+                      <p className="text-sm text-zinc-400">
+                        {insight.frequency} transactions this month
+                      </p>
+                    </div>
+                  </div>
+                  {getSpendingIndicator(insight.totalSpent, insight.frequency)}
+                </div>
+
+                <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-medium">{insight.category}</h3>
-                    <p className="text-sm text-gray-500">
-                      {insight.frequency} transactions this month
-                    </p>
+                    <div className="text-sm text-zinc-400 mb-1">Total Spent</div>
+                    <div className="text-2xl font-bold text-white">
+                      ${insight.totalSpent.toFixed(2)}
+                      {insight.trend === 'increasing' && <TrendingUp className="inline ml-2 text-red-500" />}
+                      {insight.trend === 'decreasing' && <TrendingDown className="inline ml-2 text-[#00C805]" />}
+                    </div>
                   </div>
-                </div>
-                {getSpendingIndicator(insight.totalSpent, insight.frequency)}
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Total Spent</div>
-                  <div className="text-2xl font-bold">
-                    ${insight.totalSpent.toFixed(2)}
-                    {insight.trend === 'increasing' && <TrendingUp className="inline ml-2 text-red-500" />}
-                    {insight.trend === 'decreasing' && <TrendingDown className="inline ml-2 text-green-500" />}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-sm text-gray-500 mb-2">Top Merchants</div>
-                  <div className="space-y-2">
-                    {insight.merchants.slice(0, 3).map(merchant => (
-                      <motion.div
-                        key={merchant.name}
-                        className="flex justify-between items-center p-2 bg-gray-50 rounded-lg"
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <div className="flex items-center">
-                          <span className="text-xl mr-2">
-                            {MERCHANT_EMOJIS[merchant.name] || '🏪'}
-                          </span>
-                          <span>{merchant.name}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">${merchant.amount.toFixed(2)}</div>
-                          <div className="text-sm text-gray-500">{merchant.count} times</div>
-                        </div>
-                      </motion.div>
-                    ))}
+                  <div>
+                    <div className="text-sm text-zinc-400 mb-2">Top Merchants</div>
+                    <div className="space-y-2">
+                      {insight.merchants.slice(0, 3).map(merchant => (
+                        <motion.div
+                          key={merchant.name}
+                          className="flex justify-between items-center p-2 bg-black/50 rounded-lg backdrop-blur-xl"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          <div className="flex items-center">
+                            <span className="text-xl mr-2">
+                              {MERCHANT_EMOJIS[merchant.name] || '🏪'}
+                            </span>
+                            <span className="text-white">{merchant.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium text-white">${merchant.amount.toFixed(2)}</div>
+                            <div className="text-sm text-zinc-400">{merchant.count} times</div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

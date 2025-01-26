@@ -77,15 +77,21 @@ const SpendingPredictions = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="p-6">
-        <div className="flex items-center mb-4">
-          <TrendingUp className="w-5 h-5 mr-2" />
-          <h3 className="text-lg font-medium">Discretionary Spending Predictions</h3>
+      <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+        <motion.div
+          className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+          initial={false}
+        />
+        <div className="relative">
+          <div className="flex items-center mb-4">
+            <TrendingUp className="w-5 h-5 mr-2 text-[#00C805]" />
+            <h3 className="text-lg font-medium text-white">Discretionary Spending Predictions</h3>
+          </div>
+          <p className="text-sm text-zinc-400 mb-4">
+            Based on your spending patterns, here are likely upcoming expenses
+            (excluding bills and recurring payments)
+          </p>
         </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Based on your spending patterns, here are likely upcoming expenses
-          (excluding bills and recurring payments)
-        </p>
       </Card>
 
       {predictions.map((prediction, index) => (
@@ -95,38 +101,46 @@ const SpendingPredictions = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-          <Card className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-medium">{prediction.category}</h3>
-                <div className="flex items-center text-sm text-gray-500 mt-1">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  <span>Expected around {new Date(prediction.predictedDate).toLocaleDateString()}</span>
+          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+            <motion.div
+              className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+              initial={false}
+            />
+            <div className="relative">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-white">{prediction.category}</h3>
+                  <div className="flex items-center text-sm text-zinc-400 mt-1">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    <span>Expected around {new Date(prediction.predictedDate).toLocaleDateString()}</span>
+                  </div>
+                  {prediction.amount && (
+                    <div className="text-sm font-medium mt-1 text-white">
+                      Estimated amount: ${prediction.amount.toFixed(2)}
+                    </div>
+                  )}
                 </div>
-                {prediction.amount && (
-                  <div className="text-sm font-medium mt-1">
-                    Estimated amount: ${prediction.amount.toFixed(2)}
+                {prediction.warning && (
+                  <div className="flex items-center text-yellow-400">
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    <span className="text-sm">{prediction.warning}</span>
                   </div>
                 )}
               </div>
-              {prediction.warning && (
-                <div className="flex items-center text-yellow-500">
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  <span className="text-sm">{prediction.warning}</span>
-                </div>
-              )}
-            </div>
 
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-gray-500 mb-1">
-                  Likelihood: {(prediction.likelihood * 100).toFixed(0)}%
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${prediction.likelihood * 100}%` }}
-                  />
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm text-zinc-400 mb-1">
+                    Likelihood: {(prediction.likelihood * 100).toFixed(0)}%
+                  </div>
+                  <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${prediction.likelihood * 100}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

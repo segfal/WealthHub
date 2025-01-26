@@ -97,21 +97,27 @@ const SpendingPatterns = () => {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="p-6">
-          <div className="flex items-center mb-4">
-            <TrendingUp className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Discretionary Spending by Day</h3>
-          </div>
-          <div className="space-y-4">
-            {dailyTotals.map(({ day, totalSpend, totalTransactions }) => (
-              <div key={day} className="flex justify-between items-center">
-                <div>
-                  <span className="font-medium">{day}</span>
-                  <span className="text-sm text-gray-500 ml-2">({totalTransactions} transactions)</span>
+        <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+          <motion.div
+            className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+            initial={false}
+          />
+          <div className="relative">
+            <div className="flex items-center mb-4">
+              <TrendingUp className="w-5 h-5 mr-2 text-[#00C805]" />
+              <h3 className="text-lg font-medium text-white">Discretionary Spending by Day</h3>
+            </div>
+            <div className="space-y-4">
+              {dailyTotals.map(({ day, totalSpend, totalTransactions }) => (
+                <div key={day} className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium text-white">{day}</span>
+                    <span className="text-sm text-zinc-400 ml-2">({totalTransactions} transactions)</span>
+                  </div>
+                  <span className="font-medium text-white">${totalSpend.toFixed(2)}</span>
                 </div>
-                <span className="font-medium">${totalSpend.toFixed(2)}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
       </motion.div>
@@ -122,24 +128,30 @@ const SpendingPatterns = () => {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <Card className="p-6">
-          <div className="flex items-center mb-4">
-            <Clock className="w-5 h-5 mr-2" />
-            <h3 className="text-lg font-medium">Most Active Shopping Times</h3>
-          </div>
-          <div className="space-y-4">
-            {patterns
-              .sort((a, b) => b.frequency - a.frequency)
-              .slice(0, 5)
-              .map((pattern) => (
-                <div key={`${pattern.dayOfWeek}-${pattern.timeOfDay}`} className="flex justify-between items-center">
-                  <div>
-                    <span className="font-medium">{pattern.dayOfWeek}s at {pattern.timeOfDay}</span>
-                    <span className="text-sm text-gray-500 ml-2">({pattern.frequency} times)</span>
+        <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+          <motion.div
+            className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+            initial={false}
+          />
+          <div className="relative">
+            <div className="flex items-center mb-4">
+              <Clock className="w-5 h-5 mr-2 text-[#00C805]" />
+              <h3 className="text-lg font-medium text-white">Most Active Shopping Times</h3>
+            </div>
+            <div className="space-y-4">
+              {patterns
+                .sort((a, b) => b.frequency - a.frequency)
+                .slice(0, 5)
+                .map((pattern) => (
+                  <div key={`${pattern.dayOfWeek}-${pattern.timeOfDay}`} className="flex justify-between items-center">
+                    <div>
+                      <span className="font-medium text-white">{pattern.dayOfWeek}s at {pattern.timeOfDay}</span>
+                      <span className="text-sm text-zinc-400 ml-2">({pattern.frequency} times)</span>
+                    </div>
+                    <span className="font-medium text-white">${pattern.averageSpend.toFixed(2)} avg</span>
                   </div>
-                  <span className="font-medium">${pattern.averageSpend.toFixed(2)} avg</span>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
         </Card>
       </motion.div>
