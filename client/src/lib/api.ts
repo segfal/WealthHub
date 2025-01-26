@@ -85,3 +85,13 @@ export const getSpendingInsights = async (accountId: string) => {
     return response.data;
 };
 
+export const getBillsIncomeAnalysis = async (accountId: string, year?: number, month?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
+    
+    const response = await apiService.get(`/api/analysis/bills-income/${accountId}?${params}`);
+    console.log('Bills-Income Analysis Response:', response.data);
+    return response.data;
+};
+
