@@ -4,14 +4,13 @@ import { Card } from "./ui/card";
 import { AlertTriangle, Receipt, Calendar, Loader2, DollarSign, PieChart } from "lucide-react";
 import { getBillsOverview, getMonthlyIncome } from "../lib/api";
 
-interface BillTransaction {
-  transaction_id: string;
-  account_id: string;
-  date: string;
+interface BillData {
+  id: string;
+  name: string;
   amount: number;
+  due_date: string;
+  status: string;
   category: string;
-  merchant: string;
-  location: string;
 }
 
 interface ProcessedBill {
@@ -40,6 +39,12 @@ const BillsOverview = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to safely parse dates
+  const safeParseDate = (dateStr: string) => {
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
   useEffect(() => {
     const accountId = import.meta.env.VITE_ACCOUNT_ID;
     if (!accountId) {
@@ -64,26 +69,29 @@ const BillsOverview = () => {
         const monthlyIncome = Array.isArray(incomeData) ? 
           incomeData.reduce((sum, t) => sum + Math.abs(t.amount), 0) : 0;
 
-        const totalBills = billsData.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        const totalBills = billsData.reduce((sum: number, t: BillData) => sum + Math.abs(t.amount), 0);
         const billsToIncomeRatio = monthlyIncome > 0 ? (totalBills / monthlyIncome) * 100 : 0;
         
         // Group bills by merchant and calculate totals
         const billsByMerchant = new Map<string, ProcessedBill>();
-        billsData.forEach(bill => {
-          const existing = billsByMerchant.get(bill.merchant);
+        billsData.forEach((bill: BillData) => {
+          const existing = billsByMerchant.get(bill.name);
+          const parsedDate = safeParseDate(bill.due_date);
+          
           if (existing) {
             existing.amount += Math.abs(bill.amount);
-            if (new Date(bill.date) > new Date(existing.date)) {
-              existing.date = bill.date;
+            const existingDate = safeParseDate(existing.date);
+            if (parsedDate > existingDate) {
+              existing.date = parsedDate.toISOString();
             }
           } else {
-            billsByMerchant.set(bill.merchant, {
-              merchant: bill.merchant,
+            billsByMerchant.set(bill.name, {
+              merchant: bill.name,
               amount: Math.abs(bill.amount),
               percentage: 0, // Will calculate after
-              date: bill.date,
+              date: parsedDate.toISOString(),
               isRecurring: true, // Assuming all bills are recurring for now
-              nextDueDate: new Date(bill.date).toISOString() // You might want to calculate this differently
+              nextDueDate: parsedDate.toISOString()
             });
           }
         });

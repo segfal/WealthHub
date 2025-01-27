@@ -89,6 +89,12 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 
+	// Add health check endpoint
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}).Methods("GET")
+
 	// Register all routes
 	handlers.SetupRoutes(router, db)
 	analyticsH.RegisterRoutes(router)

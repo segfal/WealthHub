@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"server/analytics"
+	analyticsRepo "server/analytics/repository"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -44,7 +44,7 @@ func TestGetAccount(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := analytics.NewPostgresRepository(db)
+	repo := analyticsRepo.NewPostgresRepository(db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -87,7 +87,7 @@ func TestGetTransactions(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := analytics.NewPostgresRepository(db)
+	repo := analyticsRepo.NewPostgresRepository(db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -134,7 +134,7 @@ func TestGetCategoryTotals(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := analytics.NewPostgresRepository(db)
+	repo := analyticsRepo.NewPostgresRepository(db)
 	ctx := context.Background()
 
 	tests := []struct {

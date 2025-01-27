@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
 import { AlertTriangle, DollarSign, CreditCard, LineChart, Loader2 } from "lucide-react";
@@ -41,6 +41,31 @@ const SpendingOverview = () => {
   const [spendingData, setSpendingData] = useState<SpendingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const animateValue = (element: HTMLElement, start: number, end: number, duration: number) => {
+    const startTime = performance.now();
+    
+    const updateValue = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const current = start + (end - start) * easeOutQuart;
+      
+      element.textContent = current.toFixed(2);
+      
+      if (progress < 1) {
+        requestAnimationFrame(updateValue);
+      }
+    };
+    
+    requestAnimationFrame(updateValue);
+  };
+
+  const valueRef = useRef<HTMLSpanElement>(null);
+  const averageRef = useRef<HTMLSpanElement>(null);
+  const categoriesRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const accountId = import.meta.env.VITE_ACCOUNT_ID;
@@ -97,10 +122,24 @@ const SpendingOverview = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!spendingData) return;
+
+    if (valueRef.current) {
+      animateValue(valueRef.current, 0, spendingData.total_spent, 2000);
+    }
+    if (averageRef.current) {
+      animateValue(averageRef.current, 0, spendingData.monthly_average, 2000);
+    }
+    if (categoriesRef.current) {
+      animateValue(categoriesRef.current, 0, spendingData.active_categories, 1500);
+    }
+  }, [spendingData]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#00C805]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#4ADE80]" />
       </div>
     );
   }
@@ -117,30 +156,38 @@ const SpendingOverview = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-[500px]">
       {/* Total Spent */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5 }}
+          whileHover={{ scale: 1.02 }}
         >
-          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#4ADE80]/20 relative group shadow-lg shadow-[#4ADE80]/5">
             <motion.div
-              className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+              className="absolute inset-0 bg-gradient-radial from-[#4ADE80]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-500 blur-xl"
               initial={false}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center text-white">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
-                    <DollarSign className="w-5 h-5 text-[#00C805]" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4ADE80]/20 to-[#4ADE80]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <DollarSign className="w-5 h-5 text-[#4ADE80]" />
                   </div>
                   Total Spent
                 </h3>
-                <span className="text-2xl font-bold text-[#00C805]">
-                  ${spendingData.total_spent.toFixed(2)}
-                </span>
+                <motion.span 
+                  className="text-2xl font-bold text-[#4ADE80]"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                >
+                  $<span ref={valueRef}>0.00</span>
+                </motion.span>
               </div>
               <div className="text-sm text-zinc-400">
                 {spendingData.spending_ratio < 0.7 ? "On Track" : "High Spending"}
@@ -151,26 +198,34 @@ const SpendingOverview = () => {
 
         {/* Monthly Average */}
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
+          whileHover={{ scale: 1.02 }}
         >
-          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#4ADE80]/20 relative group shadow-lg shadow-[#4ADE80]/5">
             <motion.div
-              className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+              className="absolute inset-0 bg-gradient-radial from-[#4ADE80]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-500 blur-xl"
               initial={false}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center text-white">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
-                    <CreditCard className="w-5 h-5 text-[#00C805]" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4ADE80]/20 to-[#4ADE80]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <CreditCard className="w-5 h-5 text-[#4ADE80]" />
                   </div>
                   Monthly Average
                 </h3>
-                <span className="text-2xl font-bold text-[#00C805]">
-                  ${spendingData.monthly_average.toFixed(2)}
-                </span>
+                <motion.span 
+                  className="text-2xl font-bold text-[#4ADE80]"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                >
+                  $<span ref={averageRef}>0.00</span>
+                </motion.span>
               </div>
               <div className="text-sm text-zinc-400">Based on last 30 days</div>
             </div>
@@ -179,26 +234,34 @@ const SpendingOverview = () => {
 
         {/* Active Categories */}
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
+          whileHover={{ scale: 1.02 }}
         >
-          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
+          <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#4ADE80]/20 relative group shadow-lg shadow-[#4ADE80]/5">
             <motion.div
-              className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
+              className="absolute inset-0 bg-gradient-radial from-[#4ADE80]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-500 blur-xl"
               initial={false}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center text-white">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00C805]/20 to-[#00C805]/5 flex items-center justify-center backdrop-blur-xl mr-3">
-                    <LineChart className="w-5 h-5 text-[#00C805]" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4ADE80]/20 to-[#4ADE80]/5 flex items-center justify-center backdrop-blur-xl mr-3">
+                    <LineChart className="w-5 h-5 text-[#4ADE80]" />
                   </div>
                   Active Categories
                 </h3>
-                <span className="text-2xl font-bold text-[#00C805]">
-                  {spendingData.active_categories}
-                </span>
+                <motion.span 
+                  className="text-2xl font-bold text-[#4ADE80]"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                >
+                  <span ref={categoriesRef}>0</span>
+                </motion.span>
               </div>
               <div className="text-sm text-zinc-400">Spending categories this month</div>
             </div>
@@ -207,63 +270,126 @@ const SpendingOverview = () => {
       </div>
 
       {/* Financial Health Overview */}
-      <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#00C805]/20 relative group shadow-lg shadow-[#00C805]/5">
-        <motion.div
-          className="absolute inset-0 bg-gradient-radial from-[#00C805]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-500 blur-xl"
-          initial={false}
-        />
-        <div className="relative">
-          <h3 className="text-xl font-medium flex items-center text-white mb-6">
-            <LineChart className="w-5 h-5 text-[#00C805] mr-2" />
-            Financial Health Overview
-            <span className="text-[#00C805] ml-2">✨</span>
-          </h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="flex-1"
+      >
+        <Card className="p-6 bg-[#1a1d21] backdrop-blur-xl border border-[#4ADE80]/20 relative group shadow-lg shadow-[#4ADE80]/5 h-full">
+          <motion.div
+            className="absolute inset-0 bg-gradient-radial from-[#4ADE80]/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-500 blur-xl"
+            initial={false}
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          />
+          <div className="relative">
+            <h3 className="text-xl font-medium flex items-center text-white mb-6">
+              <LineChart className="w-5 h-5 text-[#4ADE80] mr-2" />
+              Financial Health Overview
+              <motion.span 
+                className="text-[#4ADE80] ml-2"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 10, -10, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                ✨
+              </motion.span>
+            </h3>
 
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-zinc-400">Spending Ratio</span>
-                <span className="text-white">{(spendingData.spending_ratio * 100).toFixed(1)}%</span>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-400">Spending Ratio</span>
+                  <motion.span 
+                    className="text-white"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    {(spendingData.spending_ratio * 100).toFixed(1)}%
+                  </motion.span>
+                </div>
+                <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-[#4ADE80] to-emerald-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${spendingData.spending_ratio * 100}%` }}
+                    transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${spendingData.spending_ratio * 100}%` }}
-                  transition={{ duration: 0.5 }}
-                />
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-400">Category Diversity</span>
+                  <motion.span 
+                    className="text-white"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 }}
+                  >
+                    {(spendingData.category_diversity * 100).toFixed(1)}%
+                  </motion.span>
+                </div>
+                <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-[#4ADE80] to-emerald-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${spendingData.category_diversity * 100}%` }}
+                    transition={{ duration: 1, delay: 0.7, ease: "easeOut" }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-zinc-400">Category Diversity</span>
-                <span className="text-white">{(spendingData.category_diversity * 100).toFixed(1)}%</span>
-              </div>
-              <div className="h-2 bg-black/50 rounded-full overflow-hidden backdrop-blur-xl">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-[#00C805] to-emerald-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${spendingData.category_diversity * 100}%` }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                />
-              </div>
-            </div>
+            {/* Quick Tips */}
+            <motion.div 
+              className="mt-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+            >
+              <h4 className="text-white font-medium mb-3 flex items-center">
+                Quick Tips 
+                <motion.span
+                  animate={{
+                    rotate: [0, 15, -15, 0],
+                    scale: [1, 1.2, 1]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1
+                  }}
+                >
+                  💡
+                </motion.span>
+              </h4>
+              <ul className="space-y-2">
+                {spendingData.tips.map((tip, index) => (
+                  <motion.li 
+                    key={index} 
+                    className="text-[#4ADE80]"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1 + index * 0.1 }}
+                  >
+                    • {tip}
+                  </motion.li>
+                ))}
+              </ul>
+            </motion.div>
           </div>
-
-          {/* Quick Tips */}
-          <div className="mt-6">
-            <h4 className="text-white font-medium mb-3 flex items-center">
-              Quick Tips 💡
-            </h4>
-            <ul className="space-y-2">
-              {spendingData.tips.map((tip, index) => (
-                <li key={index} className="text-[#00C805]">• {tip}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </motion.div>
     </div>
   );
 };

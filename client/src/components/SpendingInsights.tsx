@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "./ui/card";
-import { AlertTriangle, TrendingDown, TrendingUp, ShoppingBag, Coffee, Utensils, Plane, Book, Monitor, Gift, ShoppingCart, CreditCard, Loader2 } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, ShoppingBag, Coffee, Utensils, Plane, Monitor, ShoppingCart, CreditCard, Loader2 } from "lucide-react";
 import { getSpendingInsights } from "../lib/api";
 // Categories that are considered bills/rent and should be excluded
 const EXCLUDED_CATEGORIES = new Set([
@@ -17,81 +17,73 @@ const EXCLUDED_CATEGORIES = new Set([
 ]);
 
 // Emoji mappings for different merchants/categories
-const MERCHANT_EMOJIS: { [key: string]: string } = {
-  // Shopping
-  'Amazon.com': '📦',
-  'Target': '🎯',
-  'Walmart': '🛒',
-  'Best Buy': '🔌',
-  'Home Depot': '🏠',
-  'IKEA': '🪑',
+// const MERCHANT_EMOJIS: { [key: string]: string } = {
+//   // Shopping
+//   'Amazon.com': '📦',
+//   'Target': '🎯',
+//   'Walmart': '🛒',
+//   'Best Buy': '🔌',
+//   'Home Depot': '🏠',
+//   'IKEA': '🪑',
   
-  // Entertainment
-  'Netflix': '🎬',
-  'Spotify': '🎵',
-  'Apple Music': '🎧',
-  'Steam': '🎮',
-  'PlayStation': '🕹️',
-  'Xbox': '🎯',
-  'AMC Theaters': '🍿',
-  'Regal Cinemas': '🎦',
+//   // Entertainment
+//   'Netflix': '🎬',
+//   'Spotify': '🎵',
+//   'Apple Music': '🎧',
+//   'Steam': '🎮',
+//   'PlayStation': '🕹️',
+//   'Xbox': '🎯',
+//   'AMC Theaters': '🍿',
+//   'Regal Cinemas': '🎦',
   
-  // Transportation
-  'Uber': '🚗',
-  'Lyft': '🚙',
-  'Shell': '⛽',
-  'Chevron': '⛽',
-  'Delta Airlines': '✈️',
-  'United Airlines': '✈️',
-  'American Airlines': '✈️',
+//   // Transportation
+//   'Uber': '🚗',
+//   'Lyft': '🚙',
+//   'Shell': '⛽',
+//   'Chevron': '⛽',
+//   'Delta Airlines': '✈️',
+//   'United Airlines': '✈️',
+//   'American Airlines': '✈️',
   
-  // Food & Dining
-  'Uber Eats': '🥡',
-  'DoorDash': '🛵',
-  'GrubHub': '🍽️',
-  'Starbucks': '☕',
-  'Dunkin': '🍩',
-  'McDonalds': '🍔',
-  'Chipotle': '🌯',
-  'Subway': '🥖',
-  'Pizza Hut': '🍕',
-  'Dominos': '🍕',
+//   // Food & Dining
+//   'Uber Eats': '🥡',
+//   'DoorDash': '🛵',
+//   'GrubHub': '🍽️',
+//   'Starbucks': '☕',
+//   'Dunkin': '🍩',
+//   'McDonalds': '🍔',
+//   'Chipotle': '🌯',
+//   'Subway': '🥖',
+//   'Pizza Hut': '🍕',
+//   'Dominos': '🍕',
   
-  // Travel & Hotels
-  'Airbnb': '🏡',
-  'Hotels.com': '🏨',
-  'Marriott': '🏨',
-  'Hilton': '🏨',
-  'Expedia': '🌎',
+//   // Travel & Hotels
+//   'Airbnb': '🏡',
+//   'Hotels.com': '🏨',
+//   'Marriott': '🏨',
+//   'Hilton': '🏨',
+//   'Expedia': '🌎',
   
-  // General Categories
-  'Restaurant': '🍽️',
-  'Bar': '🍺',
-  'Grocery': '🛒',
-  'Clothing': '👕',
-  'Entertainment': '🎭',
-  'Books': '📚',
-  'Online': '💻',
-  'Pharmacy': '💊',
-  'Health': '🏥',
-  'Fitness': '🏋️',
-  'Sports': '⚽',
-  'Education': '📚',
-  'Pet Supplies': '🐾',
-  'Beauty': '💄',
-  'Gaming': '🎮',
-  'Music': '🎵',
-  'Movies': '🎬',
-  'Coffee Shop': '☕'
-};
-
-interface Transaction {
-  category: string;
-  merchant: string;
-  amount: number;
-  location: string;
-  date: string;
-}
+//   // General Categories
+//   'Restaurant': '🍽️',
+//   'Bar': '🍺',
+//   'Grocery': '🛒',
+//   'Clothing': '👕',
+//   'Entertainment': '🎭',
+//   'Books': '📚',
+//   'Online': '💻',
+//   'Pharmacy': '💊',
+//   'Health': '🏥',
+//   'Fitness': '🏋️',
+//   'Sports': '⚽',
+//   'Education': '📚',
+//   'Pet Supplies': '🐾',
+//   'Beauty': '💄',
+//   'Gaming': '🎮',
+//   'Music': '🎵',
+//   'Movies': '🎬',
+//   'Coffee Shop': '☕'
+// };
 
 interface CategoryData {
   category: string;

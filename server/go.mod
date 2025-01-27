@@ -10,3 +10,12 @@ require (
 )
 
 require github.com/felixge/httpsnoop v1.0.3 // indirect
+
+replace (
+	server/analytics => ./analytics
+	server/bills => ./bills
+	server/categories => ./categories
+	server/handlers => ./handlers
+	server/income => ./income
+	server/types => ./types
+)
