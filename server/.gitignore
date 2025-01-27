@@ -14,7 +14,7 @@
 go.work
 
 # Environment variables
-.env
+
 .env.*
 !.env.example
 

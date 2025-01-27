@@ -27,6 +27,13 @@ type Service interface {
 
 	// GetBillPayments retrieves bill payment transactions for a specific month
 	GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetDailyPatterns retrieves daily spending patterns for a specific month
+	GetDailyPatterns(ctx context.Context, accountID string, year int, month int) ([]types.DailyPattern, error)
+
+	// GetMonthlyPatterns retrieves monthly spending patterns for a specific month
+	GetMonthlyPatterns(ctx context.Context, accountID string, year int, month int) ([]types.MonthlyPattern, error)
+	
 }
 
 // Repository defines the interface for analytics data operations
@@ -45,4 +52,19 @@ type Repository interface {
 
 	// GetBillPayments retrieves bill payment transactions for a specific month
 	GetBillPayments(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetRecentSpending retrieves and analyzes spending data for the recent period
+	GetRecentSpending(ctx context.Context, accountID string, startDate, endDate time.Time) ([]types.Transaction, error)
+
+	// GetDailySpending retrieves daily spending transactions for a specific month
+	GetDailySpending(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetMonthlySpending retrieves monthly spending transactions for a specific month
+	GetMonthlySpending(ctx context.Context, accountID string, year int, month int) ([]types.Transaction, error)
+
+	// GetCategoryDiversity retrieves category diversity for a specific month
+	GetCategoryDiversity(ctx context.Context, accountID string, year int, month int) (map[string]int, error)
+
+	
+	
 } 

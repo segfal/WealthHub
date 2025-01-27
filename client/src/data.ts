@@ -1,6 +1,19 @@
-import jane from "./dummy_data/jane.json";
-import jake from "./dummy_data/jake.json";
-import jill from "./dummy_data/jill.json";
-import john from "./dummy_data/john.json";
+// Placeholder data
+const jane = {
+  // Add placeholder data here
+};
 
-export const dummyTransactions = [jane, jake, jill, john];
+const jake = {
+  // Add placeholder data here
+};
+
+const jill = {
+  // Add placeholder data here
+};
+
+const john = {
+  // Add placeholder data here
+};
+
+export const users = [jane, jake, jill, john];
+export const defaultUser = jane;
