@@ -1,4 +1,4 @@
-# FinanceBros - Financial Analytics Platform
+# WealthHub - Financial Analytics Platform
 
 A modern financial analytics platform built with Go and React, providing spending analysis, pattern recognition, and predictive analytics.
 
